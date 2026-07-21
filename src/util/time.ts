@@ -26,7 +26,7 @@ export function formatClock(ms: number): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
-/** Fire time with day context when it is not today, e.g. 15:00 / 明天 15:00 / 7/23 15:00. */
+/** Fire time with day context when it is not today. */
 export function formatFireAt(fireAt: number, now = Date.now()): string {
   const t = new Date(fireAt);
   const n = new Date(now);
@@ -42,7 +42,7 @@ export function formatFireAt(fireAt: number, now = Date.now()): string {
   if (dayDiff === 0) return clock;
   if (dayDiff === 1) return `明天 ${clock}`;
   if (dayDiff === 2) return `后天 ${clock}`;
-  return `${t.getMonth() + 1}/${t.getDate()} ${clock}`;
+  return `${t.getMonth() + 1}月${t.getDate()}日 ${clock}`;
 }
 
 /** Relative time from now, e.g. "3m 后" or "已过 5m". */
@@ -95,40 +95,49 @@ function atLocalTime(now: number, dayOffset: number, hour: number, minute: numbe
   return d.getTime();
 }
 
-/** Next occurrence of hour:minute strictly after `now` (today or tomorrow). */
-function nextClock(now: number, hour: number, minute: number): number {
-  let t = atLocalTime(now, 0, hour, minute);
-  if (t <= now) t = atLocalTime(now, 1, hour, minute);
-  return t;
+function atCalendarDate(
+  year: number,
+  month: number,
+  day: number,
+  hour: number,
+  minute: number,
+): number {
+  return new Date(year, month - 1, day, hour, minute, 0, 0).getTime();
 }
 
-function parseClockBody(text: string, now: number, dayOffset: number): number | null {
-  // 14:00 / 9:05
+function normalizeYear(y: number): number {
+  if (y < 100) return 2000 + y;
+  return y;
+}
+
+function startOfDayMs(d: Date): number {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x.getTime();
+}
+
+/** Parse time-only portion: 14:00, 上午10点, 3pm, 10点, etc. */
+function resolveTime(text: string): { hour: number; minute: number } | null {
+  if (!text) return { hour: 9, minute: 0 };
+
   let m = text.match(/^(\d{1,2})[:：](\d{2})$/);
   if (m) {
     const hour = parseInt(m[1], 10);
     const minute = parseInt(m[2], 10);
-    if (hour <= 23 && minute <= 59) {
-      const t = atLocalTime(now, dayOffset, hour, minute);
-      return dayOffset > 0 || t > now ? t : atLocalTime(now, dayOffset + 1, hour, minute);
-    }
+    if (hour <= 23 && minute <= 59) return { hour, minute };
     return null;
   }
 
-  // 3pm / 3:30pm
   m = text.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/);
   if (m) {
     let hour = parseInt(m[1], 10);
     const minute = m[2] ? parseInt(m[2], 10) : 0;
-    const mer = m[3];
     if (hour < 1 || hour > 12 || minute > 59) return null;
-    if (mer === 'pm' && hour !== 12) hour += 12;
-    if (mer === 'am' && hour === 12) hour = 0;
-    const t = atLocalTime(now, dayOffset, hour, minute);
-    return dayOffset > 0 || t > now ? t : atLocalTime(now, dayOffset + 1, hour, minute);
+    if (m[3] === 'pm' && hour !== 12) hour += 12;
+    if (m[3] === 'am' && hour === 12) hour = 0;
+    return { hour, minute };
   }
 
-  // 下午3点 / 下午3点半
   m = text.match(/^(上午|早上|凌晨|中午|下午|晚上)(\d{1,2})点(?:(\d{1,2})分?|半)?$/);
   if (m) {
     const part = m[1];
@@ -146,12 +155,9 @@ function parseClockBody(text: string, now: number, dayOffset: number): number | 
     } else if (part === '凌晨' && hour === 12) {
       hour = 0;
     }
-
-    const t = atLocalTime(now, dayOffset, hour, minute);
-    return dayOffset > 0 || t > now ? t : atLocalTime(now, dayOffset + 1, hour, minute);
+    return { hour, minute };
   }
 
-  // 3点 / 3点半
   m = text.match(/^(\d{1,2})点(?:(\d{1,2})分?|半)?$/);
   if (m) {
     let hour = parseInt(m[1], 10);
@@ -159,17 +165,123 @@ function parseClockBody(text: string, now: number, dayOffset: number): number | 
     if (text.includes('点半')) minute = 30;
     else if (m[2]) minute = parseInt(m[2], 10);
     if (hour > 23 || minute > 59) return null;
+    return { hour, minute };
+  }
 
-    if (dayOffset > 0) {
-      if (hour >= 13) return atLocalTime(now, dayOffset, hour, minute);
-      const am = atLocalTime(now, dayOffset, hour, minute);
-      const pmHour = hour === 12 ? 12 : hour + 12;
-      const pm = atLocalTime(now, dayOffset, pmHour, minute);
-      return Math.min(am, pm);
+  return null;
+}
+
+interface CalendarParts {
+  year: number;
+  month: number;
+  day: number;
+  timeText: string;
+  hasExplicitYear: boolean;
+}
+
+/** Parse leading calendar date: 7月22日上午10点, 7/22 10:00, 2026年7月22日... */
+function parseCalendarDatePrefix(text: string, now: number): CalendarParts | null {
+  let m = text.match(/^(\d{4})年(\d{1,2})月(\d{1,2})日(.*)$/);
+  if (m) {
+    const month = parseInt(m[2], 10);
+    const day = parseInt(m[3], 10);
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+    return {
+      year: parseInt(m[1], 10),
+      month,
+      day,
+      timeText: m[4] || '上午9点',
+      hasExplicitYear: true,
+    };
+  }
+
+  m = text.match(/^(\d{1,2})月(\d{1,2})日(.*)$/);
+  if (m) {
+    const month = parseInt(m[1], 10);
+    const day = parseInt(m[2], 10);
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+    let year = new Date(now).getFullYear();
+    const dayStart = new Date(year, month - 1, day).getTime();
+    if (dayStart < startOfDayMs(new Date(now))) year += 1;
+    return {
+      year,
+      month,
+      day,
+      timeText: m[3] || '上午9点',
+      hasExplicitYear: false,
+    };
+  }
+
+  m = text.match(/^(\d{1,2})[/\-](\d{1,2})(?:[/\-](\d{2,4}))?(.*)$/);
+  if (m) {
+    const month = parseInt(m[1], 10);
+    const day = parseInt(m[2], 10);
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+    const hasExplicitYear = Boolean(m[3]);
+    let year = hasExplicitYear ? normalizeYear(parseInt(m[3]!, 10)) : new Date(now).getFullYear();
+    if (!hasExplicitYear) {
+      const dayStart = new Date(year, month - 1, day).getTime();
+      if (dayStart < startOfDayMs(new Date(now))) year += 1;
     }
+    return {
+      year,
+      month,
+      day,
+      timeText: m[4] || '9:00',
+      hasExplicitYear,
+    };
+  }
 
-    if (hour >= 13) return nextClock(now, hour, minute);
+  return null;
+}
 
+function parseAbsoluteDateTime(parts: CalendarParts, now: number): number | null {
+  const time = resolveTime(parts.timeText);
+  if (!time) return null;
+
+  let t = atCalendarDate(parts.year, parts.month, parts.day, time.hour, time.minute);
+  if (t > now) return t;
+
+  if (parts.hasExplicitYear) return null;
+
+  // Same calendar day but time already passed -> invalid, do not roll to next year.
+  const targetDay = startOfDayMs(new Date(parts.year, parts.month - 1, parts.day));
+  const today = startOfDayMs(new Date(now));
+  if (targetDay === today) return null;
+
+  t = atCalendarDate(parts.year + 1, parts.month, parts.day, time.hour, time.minute);
+  return t > now ? t : null;
+}
+
+/** Next occurrence of hour:minute strictly after `now` (today or tomorrow). */
+function nextClock(now: number, hour: number, minute: number): number {
+  let t = atLocalTime(now, 0, hour, minute);
+  if (t <= now) t = atLocalTime(now, 1, hour, minute);
+  return t;
+}
+
+function parseClockBody(text: string, now: number, dayOffset: number): number | null {
+  const time = resolveTime(text);
+  if (!time) {
+    if (text === '') {
+      const t = atLocalTime(now, dayOffset, 9, 0);
+      return t > now ? t : atLocalTime(now, dayOffset + 1, 9, 0);
+    }
+    return null;
+  }
+
+  const { hour, minute } = time;
+
+  if (dayOffset > 0) {
+    const t = atLocalTime(now, dayOffset, hour, minute);
+    return t > now ? t : atLocalTime(now, dayOffset + 1, hour, minute);
+  }
+
+  if (hour >= 13 || text.match(/^(\d{1,2})[:：](\d{2})$/)) {
+    return nextClock(now, hour, minute);
+  }
+
+  if (text.match(/^(\d{1,2})点/) && !text.match(/^(上午|早上|凌晨|中午|下午|晚上)/)) {
     const candidates = [nextClock(now, hour, minute)];
     if (hour <= 12) {
       const pmHour = hour === 12 ? 12 : hour + 12;
@@ -179,13 +291,7 @@ function parseClockBody(text: string, now: number, dayOffset: number): number | 
     return future.length ? Math.min(...future) : null;
   }
 
-  // 明天 / 后天 with no time -> default 09:00
-  if (text === '') {
-    const t = atLocalTime(now, dayOffset, 9, 0);
-    return t > now ? t : atLocalTime(now, dayOffset + 1, 9, 0);
-  }
-
-  return null;
+  return nextClock(now, hour, minute);
 }
 
 const DAY_PREFIX: Record<string, number> = {
@@ -197,21 +303,25 @@ const DAY_PREFIX: Record<string, number> = {
 
 /**
  * Parse absolute clock input into a future local timestamp.
- * Cross-day: auto-roll to tomorrow if today's time passed; or explicit 明天/后天.
+ * Supports 14:00, 明天下午3点, 7月22日上午10点, 7/22 10:00, etc.
  */
 export function parseClock(input: string, now = Date.now()): number | null {
-  let text = input.trim().toLowerCase().replace(/\s+/g, '');
+  const text = input.trim().replace(/\s+/g, '');
+
+  const dated = parseCalendarDatePrefix(text, now);
+  if (dated) return parseAbsoluteDateTime(dated, now);
 
   let dayOffset = 0;
+  let rest = text;
   for (const [prefix, offset] of Object.entries(DAY_PREFIX)) {
     if (text.startsWith(prefix)) {
       dayOffset = offset;
-      text = text.slice(prefix.length);
+      rest = text.slice(prefix.length);
       break;
     }
   }
 
-  return parseClockBody(text, now, dayOffset);
+  return parseClockBody(rest, now, dayOffset);
 }
 
 /** Parse duration or clock time into ms-from-now. */

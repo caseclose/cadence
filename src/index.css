@@ -634,8 +634,8 @@ button.link:hover:not(:disabled) {
 
 .format-guide-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px 24px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px 20px;
 }
 
 .format-guide-body h4 {

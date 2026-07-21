@@ -28,7 +28,7 @@ export function TaskForm({ onAdd }: Props) {
 
   const hint = (() => {
     if (!when) return null;
-    if (!parsed) return '无法识别，试试 1h / 2d / 14:00 / 明天下午3点';
+    if (!parsed) return '无法识别，试试 1h / 14:00 / 7月22日上午10点';
     if (parsed.kind === 'clock') {
       return `将在 ${formatFireAt(parsed.fireAt)} 提醒你（约 ${formatDuration(parsed.etaMs)} 后）`;
     }
@@ -46,7 +46,7 @@ export function TaskForm({ onAdd }: Props) {
       />
       <input
         className="field-full"
-        placeholder="多久后 / 几点提醒"
+        placeholder="多久后 / 几点 / 日期时间"
         value={when}
         onChange={(e) => setWhen(e.target.value)}
       />

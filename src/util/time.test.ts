@@ -32,13 +32,45 @@ describe('parseClock cross-day', () => {
   });
 });
 
+describe('parseClock calendar date', () => {
+  const now = new Date(2026, 6, 21, 16, 0, 0).getTime(); // Jul 21 2026 16:00
+
+  it('parses 7月22日上午10点', () => {
+    expect(parseClock('7月22日上午10点', now)).toBe(
+      new Date(2026, 6, 22, 10, 0).getTime(),
+    );
+  });
+
+  it('parses 7/22 10:00', () => {
+    expect(parseClock('7/22 10:00', now)).toBe(new Date(2026, 6, 22, 10, 0).getTime());
+  });
+
+  it('parses 2026年7月22日下午3点半', () => {
+    expect(parseClock('2026年7月22日下午3点半', now)).toBe(
+      new Date(2026, 6, 22, 15, 30).getTime(),
+    );
+  });
+
+  it('rejects past explicit datetime on same day', () => {
+    const late = new Date(2026, 6, 22, 11, 0, 0).getTime();
+    expect(parseClock('7月22日上午10点', late)).toBeNull();
+  });
+
+  it('bumps year when month/day already passed this year', () => {
+    const after = new Date(2026, 6, 23, 10, 0, 0).getTime(); // Jul 23
+    expect(parseClock('7月22日上午10点', after)).toBe(
+      new Date(2027, 6, 22, 10, 0).getTime(),
+    );
+  });
+});
+
 describe('formatFireAt', () => {
   const now = new Date(2026, 6, 21, 10, 0).getTime();
 
   it('shows today / 明天 / date', () => {
     expect(formatFireAt(new Date(2026, 6, 21, 15, 0).getTime(), now)).toBe('15:00');
     expect(formatFireAt(new Date(2026, 6, 22, 15, 0).getTime(), now)).toBe('明天 15:00');
-    expect(formatFireAt(new Date(2026, 6, 25, 15, 0).getTime(), now)).toBe('7/25 15:00');
+    expect(formatFireAt(new Date(2026, 6, 25, 15, 0).getTime(), now)).toBe('7月25日 15:00');
   });
 });
 
@@ -51,9 +83,9 @@ describe('parseWhen', () => {
     expect(r.etaMs).toBe(2 * DAY);
   });
 
-  it('clock path converts to duration', () => {
-    const r = parseWhen('明天下午3点', now)!;
+  it('clock path converts calendar date to duration', () => {
+    const r = parseWhen('7月22日上午10点', now)!;
     expect(r.kind).toBe('clock');
-    expect(r.fireAt).toBe(new Date(2026, 6, 22, 15, 0).getTime());
+    expect(r.fireAt).toBe(new Date(2026, 6, 22, 10, 0).getTime());
   });
 });
