@@ -21,7 +21,11 @@ export class ErrorBoundary extends Component<Props, State> {
 
   private reset = () => {
     try {
-      localStorage.removeItem('cadence.tasks.v1');
+      for (const key of Object.keys(localStorage)) {
+        if (key === 'cadence.tasks.v1' || key.startsWith('cadence.tasks.v1.')) {
+          localStorage.removeItem(key);
+        }
+      }
     } catch {
       // ignore
     }

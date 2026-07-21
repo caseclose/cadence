@@ -13,6 +13,8 @@ export default function App() {
   const {
     tasks,
     ready,
+    user,
+    cloudEnabled,
     init,
     addTask,
     applyAction,
@@ -20,6 +22,8 @@ export default function App() {
     exportJson,
     importJson,
   } = useStore();
+
+  const canManageTasks = !cloudEnabled || !!user;
 
   const [now, setNow] = useState(Date.now());
   const [queue, setQueue] = useState<string[]>([]); // ids of due tasks awaiting your response
@@ -114,22 +118,27 @@ export default function App() {
       </header>
 
       <main className="main">
-        <TaskForm onAdd={addTask} />
+        <TaskForm onAdd={addTask} disabled={!canManageTasks} />
 
         <section>
           <div className="section-head">
             <h2>挂起队列</h2>
-            <div className="tools">
-              <button className="link" onClick={onExport}>
-                导出
-              </button>
-              <button className="link" onClick={onImport}>
-                导入
-              </button>
-            </div>
+            {canManageTasks && (
+              <div className="tools">
+                <button className="link" onClick={onExport}>
+                  导出
+                </button>
+                <button className="link" onClick={onImport}>
+                  导入
+                </button>
+              </div>
+            )}
           </div>
           {!ready && <div className="empty">加载中…</div>}
-          {ready && activeTasks.length === 0 && (
+          {ready && !canManageTasks && (
+            <div className="empty">登录后查看和同步你的任务。</div>
+          )}
+          {ready && canManageTasks && activeTasks.length === 0 && (
             <div className="empty">还没有挂起的任务。上面挂起一个试试。</div>
           )}
           <div className="task-list">

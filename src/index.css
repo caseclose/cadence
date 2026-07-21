@@ -442,6 +442,22 @@ section {
   gap: 12px;
 }
 
+.form-disabled {
+  opacity: 0.72;
+}
+
+.form-login-hint {
+  margin: -8px 0 4px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.form-disabled input,
+.form-disabled select,
+.form-disabled button {
+  cursor: not-allowed;
+}
+
 .field-full {
   width: 100%;
   min-width: 0;

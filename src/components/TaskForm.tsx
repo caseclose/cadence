@@ -5,16 +5,17 @@ import { WhenFormatGuide } from './WhenFormatGuide';
 
 interface Props {
   onAdd: (input: { title: string; note?: string; strategy: Strategy; etaMs: number }) => void;
+  disabled?: boolean;
 }
 
-export function TaskForm({ onAdd }: Props) {
+export function TaskForm({ onAdd, disabled }: Props) {
   const [title, setTitle] = useState('');
   const [when, setWhen] = useState('');
   const [strategy, setStrategy] = useState<Strategy>('converging');
   const [note, setNote] = useState('');
 
   const parsed = when ? parseWhen(when) : null;
-  const canSubmit = title.trim().length > 0 && parsed !== null && parsed.etaMs > 0;
+  const canSubmit = !disabled && title.trim().length > 0 && parsed !== null && parsed.etaMs > 0;
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -36,19 +37,22 @@ export function TaskForm({ onAdd }: Props) {
   })();
 
   return (
-    <form className="card form-card form" onSubmit={submit}>
+    <form className={`card form-card form${disabled ? ' form-disabled' : ''}`} onSubmit={submit}>
       <h3 className="form-card-title">挂起新任务</h3>
+      {disabled && <p className="form-login-hint">请先登录后再挂起任务。</p>}
       <input
         className="field-full"
         placeholder="任务名称，例如：等模型训练完"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
+        disabled={disabled}
       />
       <input
         className="field-full"
         placeholder="多久后 / 几点 / 日期时间"
         value={when}
         onChange={(e) => setWhen(e.target.value)}
+        disabled={disabled}
       />
       <div className="form-actions-row">
         <select
@@ -56,6 +60,7 @@ export function TaskForm({ onAdd }: Props) {
           value={strategy}
           onChange={(e) => setStrategy(e.target.value as Strategy)}
           aria-label="退避策略"
+          disabled={disabled}
         >
           <option value="converging">收敛式 · 越来越勤</option>
           <option value="exponential">指数式 · 越来越疏</option>
@@ -69,6 +74,7 @@ export function TaskForm({ onAdd }: Props) {
         placeholder="备注（可选）"
         value={note}
         onChange={(e) => setNote(e.target.value)}
+        disabled={disabled}
       />
       {hint && <div className="hint">{hint}</div>}
       <WhenFormatGuide />

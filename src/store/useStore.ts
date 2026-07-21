@@ -8,8 +8,39 @@ import { mapAuthError } from './authErrors';
 import { usernameToEmail, validateUsername } from './username';
 import { sanitizeTasks } from './taskSanitize';
 
-const LS_TASKS = 'cadence.tasks.v1';
+const LS_TASKS_LEGACY = 'cadence.tasks.v1';
+const LS_TASKS_PREFIX = 'cadence.tasks.v1.';
 const LS_CONFIG = 'cadence.config.v1';
+
+function tasksKey(uid: string): string {
+  return `${LS_TASKS_PREFIX}${uid}`;
+}
+
+function loadTasksForUser(uid: string | null): Task[] {
+  if (!uid) return [];
+  return sanitizeTasks(loadLocal<unknown>(tasksKey(uid), []));
+}
+
+function loadInitialTasks(): Task[] {
+  // Cloud mode waits for auth; tasks are scoped per user id.
+  if (isCloudEnabled) return [];
+  return sanitizeTasks(loadLocal<unknown>(LS_TASKS_LEGACY, []));
+}
+
+function saveTasks(tasks: Task[], uid: string | null) {
+  if (isCloudEnabled) {
+    if (!uid) return;
+    saveLocal(tasksKey(uid), tasks);
+    return;
+  }
+  saveLocal(LS_TASKS_LEGACY, tasks);
+}
+
+function localTasksForSync(get: () => StoreState, uid: string): Task[] {
+  const cached = loadTasksForUser(uid);
+  if (get().user?.id !== uid) return cached;
+  return mergeTasks(cached, sanitizeTasks(get().tasks));
+}
 
 function loadLocal<T>(key: string, fallback: T): T {
   try {
@@ -22,7 +53,7 @@ function loadLocal<T>(key: string, fallback: T): T {
 
 /** Guard against corrupted localStorage (non-array JSON crashes React on .filter). */
 function loadTasks(): Task[] {
-  return sanitizeTasks(loadLocal<unknown>(LS_TASKS, []));
+  return loadInitialTasks();
 }
 
 function loadConfig(): BackoffConfig {
@@ -123,7 +154,7 @@ function bindRealtime(uid: string, get: () => StoreState, set: (partial: Partial
         if (payload.eventType === 'DELETE') {
           const next = cur.filter((t) => t.id !== (payload.old as TaskRow).id);
           set({ tasks: next });
-          saveLocal(LS_TASKS, next);
+          saveTasks(next, get().user?.id ?? null);
           return;
         }
         const incoming = rowToTask(payload.new as TaskRow);
@@ -136,7 +167,7 @@ function bindRealtime(uid: string, get: () => StoreState, set: (partial: Partial
         } else next = cur;
         next = sanitizeTasks(next);
         set({ tasks: next });
-        saveLocal(LS_TASKS, next);
+        saveTasks(next, get().user?.id ?? null);
       },
     )
     .subscribe();
@@ -148,13 +179,22 @@ async function syncRemoteTasks(
   set: (partial: Partial<StoreState>) => void,
 ) {
   const remote = await pullRemoteTasks(uid);
-  const merged = mergeTasks(get().tasks, remote);
+  const merged = mergeTasks(localTasksForSync(get, uid), remote);
   set({ tasks: merged });
-  saveLocal(LS_TASKS, merged);
+  saveTasks(merged, uid);
   for (const t of merged) {
     if (!remote.find((r) => r.id === t.id)) void upsertRemote(t, uid);
   }
   bindRealtime(uid, get, set);
+}
+
+function clearSessionTasks(set: (partial: Partial<StoreState>) => void) {
+  realtimeUid = null;
+  if (realtimeChannel && supabase) {
+    void supabase.removeChannel(realtimeChannel);
+    realtimeChannel = null;
+  }
+  set({ tasks: [] });
 }
 
 export const useStore = create<StoreState>((set, get) => ({
@@ -184,17 +224,15 @@ export const useStore = create<StoreState>((set, get) => ({
               console.error('sync after auth change failed', err),
             );
           } else {
-            realtimeUid = null;
-            if (realtimeChannel) {
-              void supabase!.removeChannel(realtimeChannel);
-              realtimeChannel = null;
-            }
+            clearSessionTasks(set);
           }
         });
       }
 
       if (session?.user) {
         await syncRemoteTasks(session.user.id, get, set);
+      } else {
+        set({ tasks: [] });
       }
     } catch (err) {
       console.error('init failed', err);
@@ -204,12 +242,14 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   addTask: (input) => {
+    const uid = get().user?.id;
+    if (get().cloudEnabled && !uid) return;
+
     const now = Date.now();
     const task = createTask({ id: uuid(), ...input }, now);
     const next = [...get().tasks, task];
     set({ tasks: next });
-    saveLocal(LS_TASKS, next);
-    const uid = get().user?.id;
+    saveTasks(next, uid ?? null);
     if (uid) void upsertRemote(task, uid);
   },
 
@@ -223,7 +263,7 @@ export const useStore = create<StoreState>((set, get) => ({
       return updated;
     });
     set({ tasks: next });
-    saveLocal(LS_TASKS, next);
+    saveTasks(next, get().user?.id ?? null);
     const uid = get().user?.id;
     if (uid && updated) void upsertRemote(updated, uid);
   },
@@ -231,7 +271,7 @@ export const useStore = create<StoreState>((set, get) => ({
   deleteTask: (id) => {
     const next = get().tasks.filter((t) => t.id !== id);
     set({ tasks: next });
-    saveLocal(LS_TASKS, next);
+    saveTasks(next, get().user?.id ?? null);
     if (get().user?.id) void deleteRemote(id);
   },
 
@@ -269,6 +309,7 @@ export const useStore = create<StoreState>((set, get) => ({
   signOut: async () => {
     if (!supabase) return;
     await supabase.auth.signOut();
+    clearSessionTasks(set);
     set({ user: null });
   },
 
@@ -278,10 +319,11 @@ export const useStore = create<StoreState>((set, get) => ({
     try {
       const parsed = JSON.parse(json) as { tasks?: unknown; config?: BackoffConfig };
       const tasks = sanitizeTasks(Array.isArray(parsed.tasks) ? parsed.tasks : []);
-      set({ tasks });
-      saveLocal(LS_TASKS, tasks);
-      if (parsed.config) get().setConfig(parsed.config);
       const uid = get().user?.id;
+      if (get().cloudEnabled && !uid) return;
+      set({ tasks });
+      saveTasks(tasks, uid ?? null);
+      if (parsed.config) get().setConfig(parsed.config);
       if (uid) for (const t of tasks) void upsertRemote(t, uid);
     } catch {
       // ignore malformed import
