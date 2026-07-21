@@ -136,12 +136,14 @@ body {
 .brand {
   flex: 1;
   min-width: 0;
+  overflow: visible;
 }
 
 .brand-row {
   display: flex;
   align-items: center;
   gap: 10px;
+  overflow: visible;
 }
 
 .brand-mark {
@@ -159,14 +161,17 @@ body {
 }
 
 .logo {
+  display: inline-block;
+  flex-shrink: 0;
+  padding-inline-end: 0.12em;
   font-weight: 800;
   font-size: clamp(24px, 3.2vw, 30px);
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
   background: var(--gradient-logo);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  line-height: 1.15;
+  line-height: 1.2;
 }
 
 .site-toolbar {
