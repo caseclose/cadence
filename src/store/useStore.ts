@@ -19,6 +19,18 @@ function loadLocal<T>(key: string, fallback: T): T {
   }
 }
 
+/** Guard against corrupted localStorage (non-array JSON crashes React on .filter). */
+function loadTasks(): Task[] {
+  const data = loadLocal<unknown>(LS_TASKS, []);
+  return Array.isArray(data) ? (data as Task[]) : [];
+}
+
+function loadConfig(): BackoffConfig {
+  const data = loadLocal<unknown>(LS_CONFIG, DEFAULT_BACKOFF);
+  if (!data || typeof data !== 'object') return DEFAULT_BACKOFF;
+  return { ...DEFAULT_BACKOFF, ...(data as BackoffConfig) };
+}
+
 function saveLocal(key: string, value: unknown) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
@@ -71,8 +83,8 @@ async function deleteRemote(id: string) {
 }
 
 export const useStore = create<StoreState>((set, get) => ({
-  tasks: loadLocal<Task[]>(LS_TASKS, []),
-  config: loadLocal<BackoffConfig>(LS_CONFIG, DEFAULT_BACKOFF),
+  tasks: loadTasks(),
+  config: loadConfig(),
   user: null,
   cloudEnabled: isCloudEnabled,
   ready: false,
@@ -221,8 +233,8 @@ export const useStore = create<StoreState>((set, get) => ({
 
   importJson: (json) => {
     try {
-      const parsed = JSON.parse(json) as { tasks?: Task[]; config?: BackoffConfig };
-      const tasks = parsed.tasks ?? [];
+      const parsed = JSON.parse(json) as { tasks?: unknown; config?: BackoffConfig };
+      const tasks = Array.isArray(parsed.tasks) ? (parsed.tasks as Task[]) : [];
       set({ tasks });
       saveLocal(LS_TASKS, tasks);
       if (parsed.config) get().setConfig(parsed.config);
