@@ -1,5 +1,6 @@
-import { Task } from '../scheduler/types';
+import type { Task } from '../scheduler/types';
 import { asNum } from './taskSanitize';
+import { decryptTaskPayload, encryptTaskPayload } from '../crypto/e2ee';
 
 /** DB row shape (snake_case) as stored in Supabase. */
 export interface TaskRow {
@@ -16,9 +17,18 @@ export interface TaskRow {
   created_at: number;
   updated_at: number;
   completed_at: number | null;
+  /** Present when task body is E2EE; plaintext columns are placeholders. */
+  enc?: string | null;
 }
 
-export function rowToTask(row: TaskRow): Task {
+const PLACEHOLDER_TITLE = '[e2ee]';
+
+export function isEncryptedRow(row: TaskRow): boolean {
+  return typeof row.enc === 'string' && row.enc.length > 0;
+}
+
+/** Legacy plaintext row → task. */
+export function rowToTaskPlain(row: TaskRow): Task {
   return {
     id: row.id,
     title: row.title,
@@ -38,7 +48,20 @@ export function rowToTask(row: TaskRow): Task {
   };
 }
 
-export function taskToRow(task: Task, userId: string): TaskRow {
+export async function rowToTask(row: TaskRow, dek: CryptoKey | null): Promise<Task | null> {
+  if (isEncryptedRow(row)) {
+    if (!dek) return null;
+    try {
+      const task = await decryptTaskPayload(dek, row.enc!);
+      return { ...task, id: row.id, updatedAt: asNum(row.updated_at) };
+    } catch {
+      return null;
+    }
+  }
+  return rowToTaskPlain(row);
+}
+
+export function taskToRowPlain(task: Task, userId: string): TaskRow {
   return {
     id: task.id,
     user_id: userId,
@@ -53,5 +76,27 @@ export function taskToRow(task: Task, userId: string): TaskRow {
     created_at: task.createdAt,
     updated_at: task.updatedAt,
     completed_at: task.completedAt ?? null,
+    enc: null,
+  };
+}
+
+export async function taskToRow(task: Task, userId: string, dek: CryptoKey | null): Promise<TaskRow> {
+  if (!dek) return taskToRowPlain(task, userId);
+  const enc = await encryptTaskPayload(dek, task);
+  return {
+    id: task.id,
+    user_id: userId,
+    title: PLACEHOLDER_TITLE,
+    note: null,
+    strategy: 'converging',
+    eta_ms: 0,
+    state: 'waiting',
+    attempts: 0,
+    next_fire_at: 0,
+    priority: 0,
+    created_at: task.createdAt,
+    updated_at: task.updatedAt,
+    completed_at: null,
+    enc,
   };
 }

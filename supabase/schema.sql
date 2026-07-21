@@ -16,7 +16,8 @@ create table if not exists public.tasks (
   priority int not null default 0,
   created_at bigint not null,
   updated_at bigint not null,
-  completed_at bigint
+  completed_at bigint,
+  enc text
 );
 
 create index if not exists tasks_user_idx on public.tasks (user_id);

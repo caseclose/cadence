@@ -9,6 +9,7 @@ import { ReminderModal } from './components/ReminderModal';
 import { AuthBar } from './components/AuthBar';
 import { ThemeToggle } from './components/ThemeToggle';
 import { ProjectIntro } from './components/ProjectIntro';
+import { UnlockVault } from './components/UnlockVault';
 
 export default function App() {
   const {
@@ -16,6 +17,7 @@ export default function App() {
     ready,
     user,
     cloudEnabled,
+    e2eeLocked,
     init,
     addTask,
     applyAction,
@@ -24,7 +26,7 @@ export default function App() {
     importJson,
   } = useStore();
 
-  const canManageTasks = !cloudEnabled || !!user;
+  const canManageTasks = (!cloudEnabled || !!user) && !e2eeLocked;
 
   const [now, setNow] = useState(Date.now());
   const [queue, setQueue] = useState<string[]>([]); // ids of due tasks awaiting your response
@@ -119,6 +121,7 @@ export default function App() {
 
       <main className="main">
         <ProjectIntro />
+        {user && e2eeLocked && <UnlockVault />}
         <TaskForm onAdd={addTask} disabled={!canManageTasks} />
 
         <section>
@@ -136,7 +139,13 @@ export default function App() {
             )}
           </div>
           {!ready && <div className="empty">加载中…</div>}
-          {ready && !canManageTasks && (
+          {ready && !canManageTasks && user && e2eeLocked && (
+            <div className="empty">请先输入密码解锁加密任务。</div>
+          )}
+          {ready && !canManageTasks && user && !e2eeLocked && (
+            <div className="empty">登录后查看和同步你的任务。</div>
+          )}
+          {ready && !canManageTasks && !user && (
             <div className="empty">登录后查看和同步你的任务。</div>
           )}
           {ready && canManageTasks && activeTasks.length === 0 && (

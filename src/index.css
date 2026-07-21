@@ -624,6 +624,26 @@ section {
   color: var(--warn);
 }
 
+.intro-privacy {
+  margin: 12px 0 0;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.intro-privacy strong {
+  color: var(--text);
+}
+
+.intro-privacy-link {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.intro-privacy-link:hover {
+  text-decoration: underline;
+}
+
 .form-card {
   padding: 24px;
   border-color: var(--border-strong);
@@ -668,6 +688,40 @@ section {
 .form-disabled select,
 .form-disabled button {
   cursor: not-allowed;
+}
+
+.vault-card {
+  padding: 16px 18px;
+  border-color: color-mix(in srgb, var(--accent) 24%, var(--border));
+  background: color-mix(in srgb, var(--panel) 90%, var(--accent-soft));
+}
+
+.vault-title {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.vault-copy {
+  margin: 0 0 12px;
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--muted);
+}
+
+.vault-copy strong {
+  color: var(--text);
+}
+
+.vault-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.vault-row .auth-field {
+  flex: 1;
+  min-width: 0;
 }
 
 .field-full {

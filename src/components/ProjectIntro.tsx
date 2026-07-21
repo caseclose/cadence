@@ -49,6 +49,18 @@ export function ProjectIntro() {
               </p>
             </div>
           </div>
+          <p className="intro-privacy">
+            登录同步时任务内容<strong>端到端加密</strong>：云端只存密文，私钥由你的登录密码保护。详见{' '}
+            <a
+              className="intro-privacy-link"
+              href="https://github.com/caseclose/cadence/blob/main/docs/PRIVACY-E2EE.md"
+              target="_blank"
+              rel="noreferrer"
+            >
+              隐私机制说明
+            </a>
+            。
+          </p>
         </div>
       </div>
     </details>

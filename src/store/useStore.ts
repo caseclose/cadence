@@ -1,5 +1,13 @@
 import { create } from 'zustand';
 import type { RealtimeChannel, Session, User } from '@supabase/supabase-js';
+import {
+  getDek,
+  isKeyringUnlocked,
+  lockKeyring,
+  setupKeyring,
+  unlockKeyring,
+  userHasE2EE,
+} from '../crypto/keyring';
 import { createTask, schedule } from '../scheduler/backoff';
 import { Action, BackoffConfig, DEFAULT_BACKOFF, Strategy, Task } from '../scheduler/types';
 import { supabase, isCloudEnabled } from './supabase';
@@ -22,7 +30,6 @@ function loadTasksForUser(uid: string | null): Task[] {
 }
 
 function loadInitialTasks(): Task[] {
-  // Cloud mode waits for auth; tasks are scoped per user id.
   if (isCloudEnabled) return [];
   return sanitizeTasks(loadLocal<unknown>(LS_TASKS_LEGACY, []));
 }
@@ -51,7 +58,6 @@ function loadLocal<T>(key: string, fallback: T): T {
   }
 }
 
-/** Guard against corrupted localStorage (non-array JSON crashes React on .filter). */
 function loadTasks(): Task[] {
   return loadInitialTasks();
 }
@@ -77,12 +83,22 @@ function uuid(): string {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+function syncE2EEFlags(user: User | null): Pick<StoreState, 'e2eeEnabled' | 'e2eeLocked'> {
+  const enabled = userHasE2EE(user);
+  return {
+    e2eeEnabled: enabled,
+    e2eeLocked: enabled && !isKeyringUnlocked(),
+  };
+}
+
 interface StoreState {
   tasks: Task[];
   config: BackoffConfig;
   user: User | null;
   cloudEnabled: boolean;
   ready: boolean;
+  e2eeEnabled: boolean;
+  e2eeLocked: boolean;
 
   init: () => Promise<void>;
   addTask: (input: {
@@ -99,13 +115,15 @@ interface StoreState {
   signInWithUsername: (username: string, password: string) => Promise<string | null>;
   signUpWithUsername: (username: string, password: string) => Promise<string | null>;
   signOut: () => Promise<void>;
+  unlockVault: (password: string) => Promise<string | null>;
   exportJson: () => string;
   importJson: (json: string) => void;
 }
 
 async function upsertRemote(task: Task, userId: string) {
   if (!supabase) return;
-  await supabase.from('tasks').upsert(taskToRow(task, userId));
+  const row = await taskToRow(task, userId, getDek());
+  await supabase.from('tasks').upsert(row);
 }
 
 async function deleteRemote(id: string) {
@@ -134,7 +152,34 @@ async function pullRemoteTasks(uid: string): Promise<Task[]> {
     console.error('pull tasks failed', error.message);
     return [];
   }
-  return sanitizeTasks((rows as TaskRow[] | null)?.map(rowToTask) ?? []);
+  const dek = getDek();
+  const tasks: Task[] = [];
+  for (const row of (rows as TaskRow[] | null) ?? []) {
+    const task = await rowToTask(row, dek);
+    if (task) tasks.push(task);
+  }
+  return sanitizeTasks(tasks);
+}
+
+async function applyIncomingRow(
+  row: TaskRow,
+  get: () => StoreState,
+  set: (partial: Partial<StoreState>) => void,
+) {
+  if (get().e2eeLocked) return;
+  const incoming = await rowToTask(row, getDek());
+  if (!incoming) return;
+  const cur = sanitizeTasks(get().tasks);
+  const idx = cur.findIndex((t) => t.id === incoming.id);
+  let next: Task[];
+  if (idx === -1) next = [...cur, incoming];
+  else if (incoming.updatedAt >= cur[idx].updatedAt) {
+    next = [...cur];
+    next[idx] = incoming;
+  } else next = cur;
+  next = sanitizeTasks(next);
+  set({ tasks: next });
+  saveTasks(next, get().user?.id ?? null);
 }
 
 function bindRealtime(uid: string, get: () => StoreState, set: (partial: Partial<StoreState>) => void) {
@@ -150,24 +195,14 @@ function bindRealtime(uid: string, get: () => StoreState, set: (partial: Partial
       'postgres_changes',
       { event: '*', schema: 'public', table: 'tasks', filter: `user_id=eq.${uid}` },
       (payload) => {
-        const cur = sanitizeTasks(get().tasks);
         if (payload.eventType === 'DELETE') {
+          const cur = sanitizeTasks(get().tasks);
           const next = cur.filter((t) => t.id !== (payload.old as TaskRow).id);
           set({ tasks: next });
           saveTasks(next, get().user?.id ?? null);
           return;
         }
-        const incoming = rowToTask(payload.new as TaskRow);
-        const idx = cur.findIndex((t) => t.id === incoming.id);
-        let next: Task[];
-        if (idx === -1) next = [...cur, incoming];
-        else if (incoming.updatedAt >= cur[idx].updatedAt) {
-          next = [...cur];
-          next[idx] = incoming;
-        } else next = cur;
-        next = sanitizeTasks(next);
-        set({ tasks: next });
-        saveTasks(next, get().user?.id ?? null);
+        void applyIncomingRow(payload.new as TaskRow, get, set);
       },
     )
     .subscribe();
@@ -178,14 +213,41 @@ async function syncRemoteTasks(
   get: () => StoreState,
   set: (partial: Partial<StoreState>) => void,
 ) {
+  if (get().e2eeLocked) {
+    const local = loadTasksForUser(uid);
+    set({ tasks: local });
+    bindRealtime(uid, get, set);
+    return;
+  }
+
   const remote = await pullRemoteTasks(uid);
   const merged = mergeTasks(localTasksForSync(get, uid), remote);
   set({ tasks: merged });
   saveTasks(merged, uid);
-  for (const t of merged) {
-    if (!remote.find((r) => r.id === t.id)) void upsertRemote(t, uid);
+  if (isKeyringUnlocked()) {
+    for (const t of merged) {
+      void upsertRemote(t, uid);
+    }
   }
   bindRealtime(uid, get, set);
+}
+
+async function ensureE2EEWithPassword(user: User, username: string, password: string): Promise<string | null> {
+  if (!supabase) return '未配置云同步';
+  try {
+    if (userHasE2EE(user)) {
+      await unlockKeyring(user, password);
+    } else {
+      const e2eeMeta = await setupKeyring(password);
+      const { error } = await supabase.auth.updateUser({
+        data: { username: username.trim(), ...e2eeMeta },
+      });
+      if (error) return mapAuthError(error.message);
+    }
+    return null;
+  } catch {
+    return '密码错误，无法解锁端到端加密';
+  }
 }
 
 function clearSessionTasks(set: (partial: Partial<StoreState>) => void) {
@@ -194,7 +256,8 @@ function clearSessionTasks(set: (partial: Partial<StoreState>) => void) {
     void supabase.removeChannel(realtimeChannel);
     realtimeChannel = null;
   }
-  set({ tasks: [] });
+  lockKeyring();
+  set({ tasks: [], e2eeEnabled: false, e2eeLocked: false });
 }
 
 export const useStore = create<StoreState>((set, get) => ({
@@ -203,6 +266,8 @@ export const useStore = create<StoreState>((set, get) => ({
   user: null,
   cloudEnabled: isCloudEnabled,
   ready: false,
+  e2eeEnabled: false,
+  e2eeLocked: false,
 
   init: async () => {
     if (!supabase) {
@@ -213,12 +278,12 @@ export const useStore = create<StoreState>((set, get) => ({
     try {
       const { data } = await supabase.auth.getSession();
       const session: Session | null = data.session;
-      set({ user: session?.user ?? null });
+      set({ user: session?.user ?? null, ...syncE2EEFlags(session?.user ?? null) });
 
       if (!authListenerBound) {
         authListenerBound = true;
         supabase.auth.onAuthStateChange((_event, s) => {
-          set({ user: s?.user ?? null });
+          set({ user: s?.user ?? null, ...syncE2EEFlags(s?.user ?? null) });
           if (s?.user) {
             void syncRemoteTasks(s.user.id, get, set).catch((err) =>
               console.error('sync after auth change failed', err),
@@ -244,6 +309,7 @@ export const useStore = create<StoreState>((set, get) => ({
   addTask: (input) => {
     const uid = get().user?.id;
     if (get().cloudEnabled && !uid) return;
+    if (get().e2eeLocked) return;
 
     const now = Date.now();
     const task = createTask({ id: uuid(), ...input }, now);
@@ -254,6 +320,7 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   applyAction: (id, action) => {
+    if (get().e2eeLocked) return;
     const now = Date.now();
     const cfg = get().config;
     let updated: Task | null = null;
@@ -269,6 +336,7 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   deleteTask: (id) => {
+    if (get().e2eeLocked) return;
     const next = get().tasks.filter((t) => t.id !== id);
     set({ tasks: next });
     saveTasks(next, get().user?.id ?? null);
@@ -284,11 +352,19 @@ export const useStore = create<StoreState>((set, get) => ({
   signInWithUsername: async (username, password) => {
     if (!supabase) return '未配置云同步';
     if (!validateUsername(username)) return '用户名需 2–20 位（字母、数字、下划线、中文）';
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: usernameToEmail(username),
       password,
     });
-    return error ? mapAuthError(error.message) : null;
+    if (error) return mapAuthError(error.message);
+    if (!data.user) return '登录失败';
+
+    const e2eeErr = await ensureE2EEWithPassword(data.user, username, password);
+    if (e2eeErr) return e2eeErr;
+
+    set({ user: data.user, e2eeEnabled: true, e2eeLocked: false });
+    await syncRemoteTasks(data.user.id, get, set);
+    return null;
   },
 
   signUpWithUsername: async (username, password) => {
@@ -300,9 +376,29 @@ export const useStore = create<StoreState>((set, get) => ({
       options: { data: { username: username.trim() } },
     });
     if (error) return mapAuthError(error.message);
-    if (!data.session) {
+    if (!data.session || !data.user) {
       return '注册失败：请在 Supabase 关闭 Confirm email（Authentication → Email），无需邮件即可登录。';
     }
+
+    const e2eeErr = await ensureE2EEWithPassword(data.user, username, password);
+    if (e2eeErr) return e2eeErr;
+
+    set({ user: data.user, e2eeEnabled: true, e2eeLocked: false });
+    await syncRemoteTasks(data.user.id, get, set);
+    return null;
+  },
+
+  unlockVault: async (password) => {
+    const user = get().user;
+    if (!user) return '请先登录';
+    const e2eeErr = await ensureE2EEWithPassword(
+      user,
+      (user.user_metadata?.username as string) ?? '用户',
+      password,
+    );
+    if (e2eeErr) return e2eeErr;
+    set({ e2eeLocked: false, e2eeEnabled: true });
+    await syncRemoteTasks(user.id, get, set);
     return null;
   },
 
@@ -321,6 +417,7 @@ export const useStore = create<StoreState>((set, get) => ({
       const tasks = sanitizeTasks(Array.isArray(parsed.tasks) ? parsed.tasks : []);
       const uid = get().user?.id;
       if (get().cloudEnabled && !uid) return;
+      if (get().e2eeLocked) return;
       set({ tasks });
       saveTasks(tasks, uid ?? null);
       if (parsed.config) get().setConfig(parsed.config);
