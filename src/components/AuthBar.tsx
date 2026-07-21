@@ -52,7 +52,7 @@ export function AuthBar() {
       >
         <input
           className="auth-field"
-          placeholder="用户名"
+          placeholder="用户名（支持中文）"
           type="text"
           autoComplete="username"
           value={username}

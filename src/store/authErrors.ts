@@ -14,7 +14,7 @@ export function mapAuthError(message: string): string {
     return '请求过于频繁，请稍后再试。';
   }
   if (m.includes('validate email') || (m.includes('email') && m.includes('invalid format'))) {
-    return '用户名无法用于登录，请换一个（字母、数字、下划线或中文均可）。';
+    return '登录服务暂时无法识别该用户名，请刷新页面后重试；仍失败请联系管理员。';
   }
   return message;
 }
