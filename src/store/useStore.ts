@@ -51,7 +51,8 @@ interface StoreState {
   deleteTask: (id: string) => void;
   setConfig: (patch: Partial<BackoffConfig>) => void;
 
-  signInWithEmail: (email: string) => Promise<void>;
+  signInWithPassword: (email: string, password: string) => Promise<string | null>;
+  signUpWithPassword: (email: string, password: string) => Promise<string | null>;
   signOut: () => Promise<void>;
   exportJson: () => string;
   importJson: (json: string) => void;
@@ -183,12 +184,21 @@ export const useStore = create<StoreState>((set, get) => ({
     saveLocal(LS_CONFIG, config);
   },
 
-  signInWithEmail: async (email) => {
-    if (!supabase) return;
-    await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: window.location.href },
-    });
+  signInWithPassword: async (email, password) => {
+    if (!supabase) return '未配置云同步';
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return error ? error.message : null;
+  },
+
+  signUpWithPassword: async (email, password) => {
+    if (!supabase) return '未配置云同步';
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) return error.message;
+    // When email confirmation is disabled the session is returned immediately.
+    if (!data.session) {
+      return '注册成功，但项目开启了邮箱验证。请在 Supabase 关闭 Confirm email 后重试，或去邮箱确认。';
+    }
+    return null;
   },
 
   signOut: async () => {
