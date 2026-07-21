@@ -24,6 +24,8 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - run: npm run lint
+      - run: npm test
       - run: npm run build
         env:
           # Repo name based path, e.g. /cadence/. Auto-derived from the repo name.

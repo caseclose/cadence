@@ -163,7 +163,7 @@ function resolveTime(text: string): { hour: number; minute: number } | null {
 
   m = text.match(/^(\d{1,2})点(?:(\d{1,2})分?|半)?$/);
   if (m) {
-    let hour = parseInt(m[1], 10);
+    const hour = parseInt(m[1], 10);
     let minute = 0;
     if (text.includes('点半')) minute = 30;
     else if (m[2]) minute = parseInt(m[2], 10);
@@ -215,7 +215,7 @@ function parseCalendarDatePrefix(text: string, now: number): CalendarParts | nul
     };
   }
 
-  m = text.match(/^(\d{1,2})[/\-](\d{1,2})(?:[/\-](\d{2,4}))?(.*)$/);
+  m = text.match(/^(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?(.*)$/);
   if (m) {
     const month = parseInt(m[1], 10);
     const day = parseInt(m[2], 10);
