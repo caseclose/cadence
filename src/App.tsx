@@ -7,6 +7,7 @@ import { TaskForm } from './components/TaskForm';
 import { TaskCard } from './components/TaskCard';
 import { ReminderModal } from './components/ReminderModal';
 import { AuthBar } from './components/AuthBar';
+import { ThemeToggle } from './components/ThemeToggle';
 
 export default function App() {
   const {
@@ -93,11 +94,14 @@ export default function App() {
           <span className="tagline">给每个挂起的任务，一个自适应的回访节奏</span>
         </div>
         <div className="header-right">
-          {notifPerm !== 'granted' && (
-            <button className="link" onClick={enableNotifications}>
-              开启通知
-            </button>
-          )}
+          <div className="header-actions">
+            <ThemeToggle />
+            {notifPerm !== 'granted' && (
+              <button type="button" className="link" onClick={enableNotifications}>
+                通知
+              </button>
+            )}
+          </div>
           <AuthBar />
         </div>
       </header>
@@ -121,15 +125,17 @@ export default function App() {
           {ready && activeTasks.length === 0 && (
             <div className="empty">还没有挂起的任务。上面挂起一个试试。</div>
           )}
-          {activeTasks.map((t) => (
-            <TaskCard
-              key={t.id}
-              task={t}
-              now={now}
-              onCheck={(id) => setQueue((q) => (q.includes(id) ? q : [id, ...q]))}
-              onDelete={deleteTask}
-            />
-          ))}
+          <div className="task-list">
+            {activeTasks.map((t) => (
+              <TaskCard
+                key={t.id}
+                task={t}
+                now={now}
+                onCheck={(id) => setQueue((q) => (q.includes(id) ? q : [id, ...q]))}
+                onDelete={deleteTask}
+              />
+            ))}
+          </div>
         </section>
 
         {doneTasks.length > 0 && (
@@ -137,9 +143,18 @@ export default function App() {
             <div className="section-head">
               <h2>已完成</h2>
             </div>
-            {doneTasks.map((t) => (
-              <TaskCard key={t.id} task={t} now={now} onCheck={() => {}} onDelete={deleteTask} />
-            ))}
+            <div className="task-list">
+              {doneTasks.map((t) => (
+                <TaskCard
+                  key={t.id}
+                  task={t}
+                  now={now}
+                  done
+                  onCheck={() => {}}
+                  onDelete={deleteTask}
+                />
+              ))}
+            </div>
           </section>
         )}
       </main>

@@ -42,13 +42,13 @@ export function ReminderModal({ task, onResolve, onClose }: Props) {
         </div>
 
         <div className="modal-actions">
-          <button className="primary" onClick={() => act({ type: 'done' })}>
+          <button type="button" className="primary" onClick={() => act({ type: 'done' })}>
             已完成 / 收工
           </button>
-          <button onClick={() => act({ type: 'checked_not_done' })}>
+          <button type="button" onClick={() => act({ type: 'checked_not_done' })}>
             看了，还没好（稍后再提醒）
           </button>
-          <button onClick={() => act({ type: 'no_resources' })}>
+          <button type="button" onClick={() => act({ type: 'no_resources' })}>
             现在没空看（小睡一会）
           </button>
         </div>
@@ -60,6 +60,7 @@ export function ReminderModal({ task, onResolve, onClose }: Props) {
             onChange={(e) => setReWhen(e.target.value)}
           />
           <button
+            type="button"
             disabled={!parsed || parsed.etaMs <= 0}
             onClick={() => parsed && act({ type: 'reestimate', etaMs: parsed.etaMs })}
           >

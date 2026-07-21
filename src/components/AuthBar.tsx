@@ -9,14 +9,14 @@ export function AuthBar() {
   const [busy, setBusy] = useState(false);
 
   if (!cloudEnabled) {
-    return <span className="auth-status">本地模式（未配置云同步）</span>;
+    return <span className="auth-status">本地模式</span>;
   }
 
   if (user) {
     return (
       <span className="auth-status">
-        {user.email} ·{' '}
-        <button className="link" onClick={() => void signOut()}>
+        {user.email}
+        <button type="button" className="link" onClick={() => void signOut()}>
           退出
         </button>
       </span>
@@ -34,28 +34,34 @@ export function AuthBar() {
   };
 
   return (
-    <span className="auth-status auth-form">
-      <input
-        className="auth-input"
-        placeholder="邮箱"
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
-      <input
-        className="auth-input"
-        placeholder="密码 (≥6位)"
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
-      <button className="link" disabled={!canSubmit} onClick={() => void run(signInWithPassword)}>
-        登录
-      </button>
-      <button className="link" disabled={!canSubmit} onClick={() => void run(signUpWithPassword)}>
-        注册
-      </button>
+    <div className="auth-panel">
+      <div className="auth-form auth-status">
+        <div className="auth-form-row">
+          <input
+            className="auth-input"
+            placeholder="邮箱"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <input
+            className="auth-input"
+            placeholder="密码 ≥6 位"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </div>
+        <div className="auth-btns">
+          <button type="button" className="link" disabled={!canSubmit} onClick={() => void run(signInWithPassword)}>
+            登录
+          </button>
+          <button type="button" className="link" disabled={!canSubmit} onClick={() => void run(signUpWithPassword)}>
+            注册
+          </button>
+        </div>
+      </div>
       {msg && <span className="auth-msg">{msg}</span>}
-    </span>
+    </div>
   );
 }

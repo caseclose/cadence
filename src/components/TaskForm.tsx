@@ -36,11 +36,12 @@ export function TaskForm({ onAdd }: Props) {
   })();
 
   return (
-    <form className="card form" onSubmit={submit}>
+    <form className="card form-card form" onSubmit={submit}>
+      <h3 className="form-card-title">挂起新任务</h3>
       <div className="row">
         <input
           className="grow"
-          placeholder="挂起一个任务，例如：等模型训练完"
+          placeholder="任务名称，例如：等模型训练完"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
@@ -53,8 +54,8 @@ export function TaskForm({ onAdd }: Props) {
           onChange={(e) => setWhen(e.target.value)}
         />
         <select value={strategy} onChange={(e) => setStrategy(e.target.value as Strategy)}>
-          <option value="converging">收敛式 (有ETA，越来越勤)</option>
-          <option value="exponential">指数式 (等人/agent，越来越疏)</option>
+          <option value="converging">收敛式 · 有 ETA，越来越勤</option>
+          <option value="exponential">指数式 · 等人/agent，越来越疏</option>
         </select>
         <button type="submit" disabled={!canSubmit}>
           挂起
