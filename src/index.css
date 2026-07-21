@@ -386,7 +386,7 @@ body {
 .main {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 24px;
 }
 
 section {
@@ -413,29 +413,139 @@ section {
 }
 
 .intro-card {
-  padding: 22px 24px;
-  margin-bottom: 4px;
-  background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
-  border-color: var(--border);
+  padding: 0;
+  margin-bottom: 0;
+  overflow: hidden;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .intro-card:hover {
-  box-shadow: var(--shadow-sm);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-md);
 }
 
-.intro-title {
-  margin: 0 0 12px;
+.intro-card[open] {
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+  box-shadow: var(--shadow-md);
+}
+
+.intro-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+
+.intro-summary::-webkit-details-marker {
+  display: none;
+}
+
+.intro-summary::marker {
+  content: '';
+}
+
+.intro-summary:hover {
+  background: var(--bg-subtle);
+}
+
+.intro-summary-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: var(--accent-soft);
+  color: var(--accent);
   font-size: 15px;
+  flex-shrink: 0;
+}
+
+.intro-summary-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.intro-summary-title {
+  font-size: 14px;
   font-weight: 700;
   color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.intro-summary-hint {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.intro-chevron {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg);
+  margin-top: -3px;
+  transition: transform 0.22s ease;
+}
+
+.intro-card[open] .intro-chevron {
+  transform: rotate(225deg);
+  margin-top: 3px;
+  border-color: var(--accent);
+}
+
+.intro-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.28s ease;
+}
+
+.intro-card[open] .intro-panel {
+  grid-template-rows: 1fr;
+}
+
+.intro-panel-inner {
+  overflow: hidden;
+  min-height: 0;
+  padding: 0 18px;
+  border-top: 1px solid transparent;
+  transition:
+    padding 0.28s ease,
+    border-color 0.28s ease;
+}
+
+.intro-card[open] .intro-panel-inner {
+  padding: 4px 18px 18px;
+  border-top-color: var(--border);
 }
 
 .intro-lead,
 .intro-body {
-  margin: 0 0 12px;
-  font-size: 14px;
-  line-height: 1.65;
+  margin: 14px 0 0;
+  font-size: 13px;
+  line-height: 1.7;
   color: var(--muted);
+}
+
+.intro-body {
+  margin-top: 10px;
 }
 
 .intro-lead strong,
@@ -446,41 +556,39 @@ section {
 
 .intro-lead code {
   font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-  font-size: 0.92em;
+  font-size: 0.9em;
   padding: 1px 6px;
   border-radius: 5px;
   background: var(--bg-subtle);
   color: var(--accent);
 }
 
-.intro-body {
-  margin-bottom: 16px;
+.intro-strategies {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
 }
 
-.intro-points {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.intro-strategy {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-}
-
-.intro-points li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 13px;
-  color: var(--muted);
+  align-items: flex-start;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--bg-subtle);
+  font-size: 12px;
   line-height: 1.45;
+  color: var(--muted);
 }
 
 .intro-badge {
-  flex-shrink: 0;
   padding: 2px 8px;
   border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .intro-badge.converging {
@@ -1095,6 +1203,14 @@ button.link:hover:not(:disabled) {
 
   .auth-msg {
     text-align: left;
+  }
+
+  .intro-strategies {
+    grid-template-columns: 1fr;
+  }
+
+  .intro-summary-hint {
+    white-space: normal;
   }
 }
 
