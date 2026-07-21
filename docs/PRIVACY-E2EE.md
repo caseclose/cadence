@@ -48,16 +48,6 @@
 - 数据只在浏览器 `localStorage`，不走云端
 - 不启用上述 E2EE 流程（无服务器可防）
 
-## 数据库迁移
-
-在 Supabase SQL Editor 执行一次：
-
-[`supabase/migration_e2ee.sql`](migration_e2ee.sql)
-
-```sql
-alter table public.tasks add column if not exists enc text;
-```
-
 ## 给运维 / 开发者的说明
 
 - 即使拥有 `service_role` key，也只能读到 `enc` 密文和加密后的私钥备份
