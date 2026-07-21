@@ -4,6 +4,7 @@ import { createTask, schedule } from '../scheduler/backoff';
 import { Action, BackoffConfig, DEFAULT_BACKOFF, Strategy, Task } from '../scheduler/types';
 import { supabase, isCloudEnabled } from './supabase';
 import { rowToTask, taskToRow, TaskRow } from './mapping';
+import { mapAuthError } from './authErrors';
 
 const LS_TASKS = 'cadence.tasks.v1';
 const LS_CONFIG = 'cadence.config.v1';
@@ -187,13 +188,13 @@ export const useStore = create<StoreState>((set, get) => ({
   signInWithPassword: async (email, password) => {
     if (!supabase) return '未配置云同步';
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return error ? error.message : null;
+    return error ? mapAuthError(error.message) : null;
   },
 
   signUpWithPassword: async (email, password) => {
     if (!supabase) return '未配置云同步';
     const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error) return error.message;
+    if (error) return mapAuthError(error.message);
     // When email confirmation is disabled the session is returned immediately.
     if (!data.session) {
       return '注册成功，但项目开启了邮箱验证。请在 Supabase 关闭 Confirm email 后重试，或去邮箱确认。';
