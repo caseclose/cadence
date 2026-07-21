@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react';
 import { Strategy } from '../scheduler/types';
 import { parseWhen, formatDuration, formatClock } from '../util/time';
+import { WhenFormatGuide } from './WhenFormatGuide';
 
 interface Props {
   onAdd: (input: { title: string; note?: string; strategy: Strategy; etaMs: number }) => void;
@@ -68,6 +69,7 @@ export function TaskForm({ onAdd }: Props) {
         />
       </div>
       {hint && <div className="hint">{hint}</div>}
+      <WhenFormatGuide />
     </form>
   );
 }

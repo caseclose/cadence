@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Action, Task } from '../scheduler/types';
 import { parseWhen, formatDuration, formatClock } from '../util/time';
+import { WhenFormatGuide } from './WhenFormatGuide';
 
 interface Props {
   task: Task;
@@ -66,6 +67,7 @@ export function ReminderModal({ task, onResolve, onClose }: Props) {
           </button>
         </div>
         {hint && <div className="hint">{hint}</div>}
+        <WhenFormatGuide />
       </div>
     </div>
   );
