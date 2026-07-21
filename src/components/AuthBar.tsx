@@ -65,17 +65,19 @@ export function AuthBar() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
-        <button type="submit" className="btn-sm btn-primary" disabled={!canSubmit}>
-          登录
-        </button>
-        <button
-          type="button"
-          className="btn-sm btn-ghost"
-          disabled={!canSubmit}
-          onClick={() => void run(signUpWithPassword)}
-        >
-          注册
-        </button>
+        <div className="auth-actions">
+          <button type="submit" className="btn-sm btn-primary" disabled={!canSubmit}>
+            登录
+          </button>
+          <button
+            type="button"
+            className="btn-sm btn-ghost"
+            disabled={!canSubmit}
+            onClick={() => void run(signUpWithPassword)}
+          >
+            注册
+          </button>
+        </div>
       </form>
       {msg && <p className="auth-msg">{msg}</p>}
     </div>

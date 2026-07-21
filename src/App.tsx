@@ -100,12 +100,14 @@ export default function App() {
             <p className="tagline">给每个挂起的任务，一个自适应的回访节奏</p>
           </div>
           <div className="site-toolbar">
-            <ThemeToggle />
-            {notifPerm !== 'granted' && (
-              <button type="button" className="toolbar-btn" onClick={enableNotifications}>
-                开启通知
-              </button>
-            )}
+            <div className="toolbar-cluster">
+              <ThemeToggle />
+              {notifPerm !== 'granted' && (
+                <button type="button" className="toolbar-btn" onClick={enableNotifications}>
+                  开启通知
+                </button>
+              )}
+            </div>
             <AuthBar />
           </div>
         </div>

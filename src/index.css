@@ -166,6 +166,13 @@ body {
   flex-shrink: 0;
 }
 
+.toolbar-cluster {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 .toolbar-btn {
   padding: 8px 12px;
   font-size: 13px;
@@ -255,6 +262,13 @@ body {
   width: 1px;
   height: 22px;
   background: var(--border);
+  flex-shrink: 0;
+}
+
+.auth-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   flex-shrink: 0;
 }
 
@@ -912,12 +926,13 @@ button.link:hover:not(:disabled) {
   .site-header-top {
     flex-direction: column;
     align-items: stretch;
-    gap: 18px;
+    gap: 16px;
   }
 
   .site-toolbar {
-    flex-wrap: wrap;
-    justify-content: flex-start;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
   }
 
   .tagline {
@@ -926,10 +941,11 @@ button.link:hover:not(:disabled) {
   }
 
   .auth-inline {
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: stretch;
     width: 100%;
-    padding: 8px;
-    gap: 8px;
+    padding: 12px;
+    gap: 10px;
   }
 
   .auth-divider {
@@ -938,7 +954,18 @@ button.link:hover:not(:disabled) {
 
   .auth-field {
     width: 100%;
-    flex: 1 1 140px;
+    flex: none;
+    min-height: 44px;
+  }
+
+  .auth-actions {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .auth-actions .btn-sm {
+    flex: 1;
   }
 
   .auth-box {
@@ -962,30 +989,17 @@ button.link:hover:not(:disabled) {
   }
 
   .site-header {
-    padding: 18px 0 22px;
+    padding: 16px 0 20px;
   }
 
-  .site-toolbar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .theme-toggle {
-    align-self: flex-start;
+  .toolbar-cluster {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .toolbar-btn {
-    width: 100%;
+    flex: 1;
     text-align: center;
-  }
-
-  .auth-inline {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .btn-sm {
-    width: 100%;
   }
 
   .form-card {
