@@ -1,8 +1,8 @@
-# yield()
+# Cadence
 
 把 CPU 的「上下文切换 + 自适应退避轮询」搬到人的多任务管理上。
 
-单核 CPU 在等待某个任务（I/O、计时器）时会把它挂起，去做别的事，并周期性回来检查它是否就绪。人也一样：你启动了一次模型训练、或把某件事交给了某个人/agent，需要过一阵才有结果。`yield()` 让你把这件事「挂起」，然后在合适的时间点回来提醒你确认，而不是一直占着你的注意力。
+单核 CPU 在等待某个任务（I/O、计时器）时会把它挂起（`yield()`），去做别的事，并周期性回来检查它是否就绪。人也一样：你启动了一次模型训练、或把某件事交给了某个人/agent，需要过一阵才有结果。Cadence 让你把这件事「挂起」，然后按一个自适应的回访节奏（cadence）回来提醒你确认，而不是一直占着你的注意力。
 
 ## 核心机制：自适应退避
 
@@ -48,7 +48,7 @@ npm test                     # 运行调度引擎单测
 
 ## 部署到 GitHub Pages
 
-1. 推到 GitHub 仓库（默认 base 路径为 `/yield/`，若仓库名不同，CI 会用仓库名自动设置）。
+1. 推到 GitHub 仓库（默认 base 路径为 `/cadence/`，若仓库名不同，CI 会用仓库名自动设置）。
 2. 仓库 `Settings → Secrets and variables → Actions` 添加 `VITE_SUPABASE_URL` 和 `VITE_SUPABASE_ANON_KEY`。
 3. 仓库 `Settings → Pages` 的 Source 选 `GitHub Actions`。
 4. 推到 `main` 即自动构建部署，见 [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)。

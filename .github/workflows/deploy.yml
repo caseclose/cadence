@@ -26,7 +26,7 @@ jobs:
       - run: npm ci
       - run: npm run build
         env:
-          # Repo name based path, e.g. /yield/. Adjust if you rename the repo.
+          # Repo name based path, e.g. /cadence/. Auto-derived from the repo name.
           VITE_BASE: /${{ github.event.repository.name }}/
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}

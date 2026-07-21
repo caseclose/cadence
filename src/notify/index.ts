@@ -78,7 +78,7 @@ export function notifyAll(payload: NotifyPayload): void {
 export function reminderCopy(task: Task): NotifyPayload {
   return {
     task,
-    title: `Yield · 该看一下「${task.title}」了`,
+    title: `Cadence · 该看一下「${task.title}」了`,
     body:
       task.strategy === 'converging'
         ? '预计应该完成了，确认一下是否可以收工？'

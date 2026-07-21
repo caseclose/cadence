@@ -89,8 +89,8 @@ export default function App() {
     <div className="app">
       <header className="header">
         <div className="brand">
-          <span className="logo">yield()</span>
-          <span className="tagline">把 CPU 调度搬到你的多任务人生</span>
+          <span className="logo">Cadence</span>
+          <span className="tagline">给每个挂起的任务，一个自适应的回访节奏</span>
         </div>
         <div className="header-right">
           {notifPerm !== 'granted' && (

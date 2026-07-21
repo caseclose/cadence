@@ -5,8 +5,8 @@ import { Action, BackoffConfig, DEFAULT_BACKOFF, Strategy, Task } from '../sched
 import { supabase, isCloudEnabled } from './supabase';
 import { rowToTask, taskToRow, TaskRow } from './mapping';
 
-const LS_TASKS = 'yield.tasks.v1';
-const LS_CONFIG = 'yield.config.v1';
+const LS_TASKS = 'cadence.tasks.v1';
+const LS_CONFIG = 'cadence.config.v1';
 
 function loadLocal<T>(key: string, fallback: T): T {
   try {
