@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Action, Task } from '../scheduler/types';
-import { parseWhen, formatDuration, formatClock } from '../util/time';
+import { parseWhen, formatDuration, formatFireAt } from '../util/time';
 import { WhenFormatGuide } from './WhenFormatGuide';
 
 interface Props {
@@ -25,10 +25,10 @@ export function ReminderModal({ task, onResolve, onClose }: Props) {
   const hint =
     parsed && parsed.etaMs > 0
       ? parsed.kind === 'clock'
-        ? `将在 ${formatClock(parsed.fireAt)} 重新提醒（约 ${formatDuration(parsed.etaMs)} 后）`
+        ? `将在 ${formatFireAt(parsed.fireAt)} 重新提醒（约 ${formatDuration(parsed.etaMs)} 后）`
         : `将在 ${formatDuration(parsed.etaMs)} 后重新提醒`
       : reWhen
-        ? '无法识别，试试 30m / 14:00 / 下午3点'
+        ? '无法识别，试试 30m / 2d / 明天14:00'
         : null;
 
   return (

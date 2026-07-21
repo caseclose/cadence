@@ -1,6 +1,6 @@
 import { FormEvent, useState } from 'react';
 import { Strategy } from '../scheduler/types';
-import { parseWhen, formatDuration, formatClock } from '../util/time';
+import { parseWhen, formatDuration, formatFireAt } from '../util/time';
 import { WhenFormatGuide } from './WhenFormatGuide';
 
 interface Props {
@@ -28,9 +28,9 @@ export function TaskForm({ onAdd }: Props) {
 
   const hint = (() => {
     if (!when) return null;
-    if (!parsed) return '无法识别，试试 1h / 90m / 14:00 / 下午3点';
+    if (!parsed) return '无法识别，试试 1h / 2d / 14:00 / 明天下午3点';
     if (parsed.kind === 'clock') {
-      return `将在 ${formatClock(parsed.fireAt)} 提醒你（约 ${formatDuration(parsed.etaMs)} 后）`;
+      return `将在 ${formatFireAt(parsed.fireAt)} 提醒你（约 ${formatDuration(parsed.etaMs)} 后）`;
     }
     return `将在 ${formatDuration(parsed.etaMs)} 后第一次提醒你`;
   })();
@@ -48,7 +48,7 @@ export function TaskForm({ onAdd }: Props) {
       <div className="row">
         <input
           className="grow"
-          placeholder="多久后 / 几点提醒 (1h · 90m · 14:00 · 下午3点)"
+          placeholder="多久后 / 几点 (1h · 2d · 14:00 · 明天下午3点)"
           value={when}
           onChange={(e) => setWhen(e.target.value)}
         />

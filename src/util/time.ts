@@ -1,23 +1,48 @@
 export const MINUTE = 60_000;
 export const HOUR = 60 * MINUTE;
+export const DAY = 24 * HOUR;
 
-/** Human-friendly compact duration, e.g. 1h 15m, 9m, 45s. */
+/** Human-friendly compact duration, e.g. 2d 3h, 1h 15m, 9m. */
 export function formatDuration(ms: number): string {
   if (ms < 0) ms = 0;
-  const h = Math.floor(ms / HOUR);
-  const m = Math.floor((ms % HOUR) / MINUTE);
-  const s = Math.floor((ms % MINUTE) / 1000);
-  if (h > 0) return m > 0 ? `${h}h ${m}m` : `${h}h`;
-  if (m > 0) return s > 0 && m < 5 ? `${m}m ${s}s` : `${m}m`;
-  return `${s}s`;
+  const days = Math.floor(ms / DAY);
+  const afterDays = ms % DAY;
+  const h = Math.floor(afterDays / HOUR);
+  const m = Math.floor((afterDays % HOUR) / MINUTE);
+  const s = Math.floor((afterDays % MINUTE) / 1000);
+
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days}d`);
+  if (h > 0) parts.push(m > 0 && days === 0 ? `${h}h ${m}m` : `${h}h`);
+  else if (m > 0) parts.push(s > 0 && m < 5 && days === 0 ? `${m}m ${s}s` : `${m}m`);
+  else if (days === 0) parts.push(`${s}s`);
+
+  return parts.join(' ') || '0s';
 }
 
 /** Local clock time, e.g. 14:30. */
 export function formatClock(ms: number): string {
   const d = new Date(ms);
-  const h = d.getHours();
-  const m = d.getMinutes();
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+/** Fire time with day context when it is not today, e.g. 15:00 / 明天 15:00 / 7/23 15:00. */
+export function formatFireAt(fireAt: number, now = Date.now()): string {
+  const t = new Date(fireAt);
+  const n = new Date(now);
+  const clock = formatClock(fireAt);
+
+  const startOf = (d: Date) => {
+    const x = new Date(d);
+    x.setHours(0, 0, 0, 0);
+    return x.getTime();
+  };
+  const dayDiff = Math.round((startOf(t) - startOf(n)) / DAY);
+
+  if (dayDiff === 0) return clock;
+  if (dayDiff === 1) return `明天 ${clock}`;
+  if (dayDiff === 2) return `后天 ${clock}`;
+  return `${t.getMonth() + 1}/${t.getDate()} ${clock}`;
 }
 
 /** Relative time from now, e.g. "3m 后" or "已过 5m". */
@@ -28,19 +53,16 @@ export function formatRelative(target: number, now: number): string {
 }
 
 export interface ParsedWhen {
-  /** Milliseconds from `now` until the reminder should fire. */
   etaMs: number;
-  /** Absolute fire time (epoch ms). */
   fireAt: number;
-  /** How the input was interpreted. */
   kind: 'duration' | 'clock';
 }
 
-/** Parse relative duration like "1h", "90m", "1h30m". */
+/** Parse relative duration like "1h", "90m", "2d", "1d12h". */
 export function parseDuration(input: string): number | null {
   const text = input.trim().toLowerCase();
   if (!text) return null;
-  const re = /(\d+(?:\.\d+)?)\s*(h|m|s)/g;
+  const re = /(\d+(?:\.\d+)?)\s*(d|h|m|s)/g;
   let total = 0;
   let matched = false;
   let match: RegExpExecArray | null;
@@ -48,7 +70,14 @@ export function parseDuration(input: string): number | null {
     matched = true;
     const value = parseFloat(match[1]);
     const unit = match[2];
-    total += unit === 'h' ? value * HOUR : unit === 'm' ? value * MINUTE : value * 1000;
+    total +=
+      unit === 'd'
+        ? value * DAY
+        : unit === 'h'
+          ? value * HOUR
+          : unit === 'm'
+            ? value * MINUTE
+            : value * 1000;
   }
   if (!matched) {
     const n = parseFloat(text);
@@ -58,34 +87,31 @@ export function parseDuration(input: string): number | null {
   return total;
 }
 
-function atLocalTime(now: number, hour: number, minute: number): number {
+function atLocalTime(now: number, dayOffset: number, hour: number, minute: number): number {
   const d = new Date(now);
+  d.setDate(d.getDate() + dayOffset);
   d.setSeconds(0, 0);
   d.setHours(hour, minute, 0, 0);
   return d.getTime();
 }
 
-/** Next occurrence of hour:minute strictly after `now`. */
+/** Next occurrence of hour:minute strictly after `now` (today or tomorrow). */
 function nextClock(now: number, hour: number, minute: number): number {
-  let t = atLocalTime(now, hour, minute);
-  if (t <= now) t += 24 * HOUR;
+  let t = atLocalTime(now, 0, hour, minute);
+  if (t <= now) t = atLocalTime(now, 1, hour, minute);
   return t;
 }
 
-/**
- * Parse absolute clock input into the next future local timestamp.
- * Supports 14:00, 3pm, 下午3点, 晚上8点半, etc.
- */
-export function parseClock(input: string, now = Date.now()): number | null {
-  let text = input.trim().toLowerCase().replace(/\s+/g, '');
-  if (!text) return null;
-
-  // 14:00 / 9:05 / 14：30
+function parseClockBody(text: string, now: number, dayOffset: number): number | null {
+  // 14:00 / 9:05
   let m = text.match(/^(\d{1,2})[:：](\d{2})$/);
   if (m) {
     const hour = parseInt(m[1], 10);
     const minute = parseInt(m[2], 10);
-    if (hour <= 23 && minute <= 59) return nextClock(now, hour, minute);
+    if (hour <= 23 && minute <= 59) {
+      const t = atLocalTime(now, dayOffset, hour, minute);
+      return dayOffset > 0 || t > now ? t : atLocalTime(now, dayOffset + 1, hour, minute);
+    }
     return null;
   }
 
@@ -98,10 +124,11 @@ export function parseClock(input: string, now = Date.now()): number | null {
     if (hour < 1 || hour > 12 || minute > 59) return null;
     if (mer === 'pm' && hour !== 12) hour += 12;
     if (mer === 'am' && hour === 12) hour = 0;
-    return nextClock(now, hour, minute);
+    const t = atLocalTime(now, dayOffset, hour, minute);
+    return dayOffset > 0 || t > now ? t : atLocalTime(now, dayOffset + 1, hour, minute);
   }
 
-  // 下午3点 / 下午3点半 / 下午3点30 / 晚上8点15分
+  // 下午3点 / 下午3点半
   m = text.match(/^(上午|早上|凌晨|中午|下午|晚上)(\d{1,2})点(?:(\d{1,2})分?|半)?$/);
   if (m) {
     const part = m[1];
@@ -120,10 +147,11 @@ export function parseClock(input: string, now = Date.now()): number | null {
       hour = 0;
     }
 
-    return nextClock(now, hour, minute);
+    const t = atLocalTime(now, dayOffset, hour, minute);
+    return dayOffset > 0 || t > now ? t : atLocalTime(now, dayOffset + 1, hour, minute);
   }
 
-  // 3点 / 3点半 — pick the soonest plausible next occurrence (am or pm).
+  // 3点 / 3点半
   m = text.match(/^(\d{1,2})点(?:(\d{1,2})分?|半)?$/);
   if (m) {
     let hour = parseInt(m[1], 10);
@@ -132,26 +160,61 @@ export function parseClock(input: string, now = Date.now()): number | null {
     else if (m[2]) minute = parseInt(m[2], 10);
     if (hour > 23 || minute > 59) return null;
 
+    if (dayOffset > 0) {
+      if (hour >= 13) return atLocalTime(now, dayOffset, hour, minute);
+      const am = atLocalTime(now, dayOffset, hour, minute);
+      const pmHour = hour === 12 ? 12 : hour + 12;
+      const pm = atLocalTime(now, dayOffset, pmHour, minute);
+      return Math.min(am, pm);
+    }
+
     if (hour >= 13) return nextClock(now, hour, minute);
 
-    const candidates: number[] = [];
-    candidates.push(nextClock(now, hour, minute));
+    const candidates = [nextClock(now, hour, minute)];
     if (hour <= 12) {
       const pmHour = hour === 12 ? 12 : hour + 12;
       candidates.push(nextClock(now, pmHour, minute));
     }
     const future = candidates.filter((t) => t > now);
-    if (future.length === 0) return null;
-    return Math.min(...future);
+    return future.length ? Math.min(...future) : null;
+  }
+
+  // 明天 / 后天 with no time -> default 09:00
+  if (text === '') {
+    const t = atLocalTime(now, dayOffset, 9, 0);
+    return t > now ? t : atLocalTime(now, dayOffset + 1, 9, 0);
   }
 
   return null;
 }
 
+const DAY_PREFIX: Record<string, number> = {
+  今天: 0,
+  明天: 1,
+  后天: 2,
+  大后天: 3,
+};
+
 /**
- * Parse either a relative duration or an absolute clock time into ms-from-now.
- * Examples: 1h, 90m, 14:00, 下午3点, 3pm — all become "how long until reminder".
+ * Parse absolute clock input into a future local timestamp.
+ * Cross-day: auto-roll to tomorrow if today's time passed; or explicit 明天/后天.
  */
+export function parseClock(input: string, now = Date.now()): number | null {
+  let text = input.trim().toLowerCase().replace(/\s+/g, '');
+
+  let dayOffset = 0;
+  for (const [prefix, offset] of Object.entries(DAY_PREFIX)) {
+    if (text.startsWith(prefix)) {
+      dayOffset = offset;
+      text = text.slice(prefix.length);
+      break;
+    }
+  }
+
+  return parseClockBody(text, now, dayOffset);
+}
+
+/** Parse duration or clock time into ms-from-now. */
 export function parseWhen(input: string, now = Date.now()): ParsedWhen | null {
   const duration = parseDuration(input);
   if (duration !== null && duration > 0) {
@@ -164,7 +227,6 @@ export function parseWhen(input: string, now = Date.now()): ParsedWhen | null {
   return { etaMs: fireAt - now, fireAt, kind: 'clock' };
 }
 
-/** @deprecated Use parseWhen; kept for call sites that only need ms. */
 export function parseEta(input: string, now = Date.now()): number | null {
   return parseWhen(input, now)?.etaMs ?? null;
 }
