@@ -13,5 +13,8 @@ export function mapAuthError(message: string): string {
   if (m.includes('rate limit')) {
     return '请求过于频繁，请稍后再试。';
   }
+  if (m.includes('validate email') || (m.includes('email') && m.includes('invalid format'))) {
+    return '用户名无法用于登录，请换一个（字母、数字、下划线或中文均可）。';
+  }
   return message;
 }
