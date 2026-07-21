@@ -7,7 +7,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:local": "VITE_BASE=/ npm run build",
     "preview": "vite preview",
+    "preview:local": "vite preview --host",
+    "start:local": "npm run build:local && npm run preview:local",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest"

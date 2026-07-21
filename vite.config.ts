@@ -8,4 +8,8 @@ const base = process.env.VITE_BASE ?? '/cadence/';
 export default defineConfig({
   base,
   plugins: [react()],
+  preview: {
+    port: 4173,
+    host: true,
+  },
 });
