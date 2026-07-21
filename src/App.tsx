@@ -88,21 +88,26 @@ export default function App() {
 
   return (
     <div className="app">
-      <header className="header">
-        <div className="brand">
-          <span className="logo">Cadence</span>
-          <span className="tagline">给每个挂起的任务，一个自适应的回访节奏</span>
-        </div>
-        <div className="header-right">
-          <div className="header-actions">
+      <header className="site-header">
+        <div className="site-header-top">
+          <div className="brand">
+            <div className="brand-row">
+              <span className="brand-mark" aria-hidden>
+                ◷
+              </span>
+              <span className="logo">Cadence</span>
+            </div>
+            <p className="tagline">给每个挂起的任务，一个自适应的回访节奏</p>
+          </div>
+          <div className="site-toolbar">
             <ThemeToggle />
             {notifPerm !== 'granted' && (
-              <button type="button" className="link" onClick={enableNotifications}>
-                通知
+              <button type="button" className="toolbar-btn" onClick={enableNotifications}>
+                开启通知
               </button>
             )}
+            <AuthBar />
           </div>
-          <AuthBar />
         </div>
       </header>
 

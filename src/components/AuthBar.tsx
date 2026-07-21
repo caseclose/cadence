@@ -9,17 +9,23 @@ export function AuthBar() {
   const [busy, setBusy] = useState(false);
 
   if (!cloudEnabled) {
-    return <span className="auth-status">本地模式</span>;
+    return <span className="auth-chip auth-chip-muted">本地模式</span>;
   }
 
   if (user) {
+    const initial = (user.email?.[0] ?? '?').toUpperCase();
     return (
-      <span className="auth-status">
-        {user.email}
-        <button type="button" className="link" onClick={() => void signOut()}>
+      <div className="auth-user">
+        <span className="auth-avatar" aria-hidden>
+          {initial}
+        </span>
+        <span className="auth-email" title={user.email ?? ''}>
+          {user.email}
+        </span>
+        <button type="button" className="btn-sm btn-ghost" onClick={() => void signOut()}>
           退出
         </button>
-      </span>
+      </div>
     );
   }
 
@@ -34,34 +40,44 @@ export function AuthBar() {
   };
 
   return (
-    <div className="auth-panel">
-      <div className="auth-form auth-status">
-        <div className="auth-form-row">
-          <input
-            className="auth-input"
-            placeholder="邮箱"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <input
-            className="auth-input"
-            placeholder="密码 ≥6 位"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
-        <div className="auth-btns">
-          <button type="button" className="link" disabled={!canSubmit} onClick={() => void run(signInWithPassword)}>
-            登录
-          </button>
-          <button type="button" className="link" disabled={!canSubmit} onClick={() => void run(signUpWithPassword)}>
-            注册
-          </button>
-        </div>
-      </div>
-      {msg && <span className="auth-msg">{msg}</span>}
+    <div className="auth-box">
+      <form
+        className="auth-inline"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (canSubmit) void run(signInWithPassword);
+        }}
+      >
+        <input
+          className="auth-field"
+          placeholder="邮箱"
+          type="email"
+          autoComplete="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <span className="auth-divider" aria-hidden />
+        <input
+          className="auth-field"
+          placeholder="密码"
+          type="password"
+          autoComplete="current-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <button type="submit" className="btn-sm btn-primary" disabled={!canSubmit}>
+          登录
+        </button>
+        <button
+          type="button"
+          className="btn-sm btn-ghost"
+          disabled={!canSubmit}
+          onClick={() => void run(signUpWithPassword)}
+        >
+          注册
+        </button>
+      </form>
+      {msg && <p className="auth-msg">{msg}</p>}
     </div>
   );
 }
