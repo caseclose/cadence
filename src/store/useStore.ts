@@ -5,6 +5,7 @@ import { Action, BackoffConfig, DEFAULT_BACKOFF, Strategy, Task } from '../sched
 import { supabase, isCloudEnabled } from './supabase';
 import { rowToTask, taskToRow, TaskRow } from './mapping';
 import { mapAuthError } from './authErrors';
+import { usernameToEmail, validateUsername } from './username';
 
 const LS_TASKS = 'cadence.tasks.v1';
 const LS_CONFIG = 'cadence.config.v1';
@@ -52,8 +53,8 @@ interface StoreState {
   deleteTask: (id: string) => void;
   setConfig: (patch: Partial<BackoffConfig>) => void;
 
-  signInWithPassword: (email: string, password: string) => Promise<string | null>;
-  signUpWithPassword: (email: string, password: string) => Promise<string | null>;
+  signInWithUsername: (username: string, password: string) => Promise<string | null>;
+  signUpWithUsername: (username: string, password: string) => Promise<string | null>;
   signOut: () => Promise<void>;
   exportJson: () => string;
   importJson: (json: string) => void;
@@ -185,19 +186,27 @@ export const useStore = create<StoreState>((set, get) => ({
     saveLocal(LS_CONFIG, config);
   },
 
-  signInWithPassword: async (email, password) => {
+  signInWithUsername: async (username, password) => {
     if (!supabase) return '未配置云同步';
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (!validateUsername(username)) return '用户名需 2–20 位（字母、数字、下划线、中文）';
+    const { error } = await supabase.auth.signInWithPassword({
+      email: usernameToEmail(username),
+      password,
+    });
     return error ? mapAuthError(error.message) : null;
   },
 
-  signUpWithPassword: async (email, password) => {
+  signUpWithUsername: async (username, password) => {
     if (!supabase) return '未配置云同步';
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (!validateUsername(username)) return '用户名需 2–20 位（字母、数字、下划线、中文）';
+    const { data, error } = await supabase.auth.signUp({
+      email: usernameToEmail(username),
+      password,
+      options: { data: { username: username.trim() } },
+    });
     if (error) return mapAuthError(error.message);
-    // When email confirmation is disabled the session is returned immediately.
     if (!data.session) {
-      return '注册成功，但项目开启了邮箱验证。请在 Supabase 关闭 Confirm email 后重试，或去邮箱确认。';
+      return '注册失败：请在 Supabase 关闭 Confirm email（Authentication → Email），无需邮件即可登录。';
     }
     return null;
   },
