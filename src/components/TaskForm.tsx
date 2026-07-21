@@ -38,37 +38,38 @@ export function TaskForm({ onAdd }: Props) {
   return (
     <form className="card form-card form" onSubmit={submit}>
       <h3 className="form-card-title">挂起新任务</h3>
-      <div className="row">
-        <input
-          className="grow"
-          placeholder="任务名称，例如：等模型训练完"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-      </div>
-      <div className="row">
-        <input
-          className="grow"
-          placeholder="多久后 / 几点 (1h · 2d · 14:00 · 明天下午3点)"
-          value={when}
-          onChange={(e) => setWhen(e.target.value)}
-        />
-        <select value={strategy} onChange={(e) => setStrategy(e.target.value as Strategy)}>
-          <option value="converging">收敛式 · 有 ETA，越来越勤</option>
-          <option value="exponential">指数式 · 等人/agent，越来越疏</option>
+      <input
+        className="field-full"
+        placeholder="任务名称，例如：等模型训练完"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+      />
+      <input
+        className="field-full"
+        placeholder="多久后 / 几点提醒"
+        value={when}
+        onChange={(e) => setWhen(e.target.value)}
+      />
+      <div className="form-actions-row">
+        <select
+          className="field-strategy"
+          value={strategy}
+          onChange={(e) => setStrategy(e.target.value as Strategy)}
+          aria-label="退避策略"
+        >
+          <option value="converging">收敛式 · 越来越勤</option>
+          <option value="exponential">指数式 · 越来越疏</option>
         </select>
-        <button type="submit" disabled={!canSubmit}>
+        <button type="submit" className="btn-submit" disabled={!canSubmit}>
           挂起
         </button>
       </div>
-      <div className="row">
-        <input
-          className="grow subtle"
-          placeholder="备注（可选）"
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-        />
-      </div>
+      <input
+        className="field-full subtle"
+        placeholder="备注（可选）"
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+      />
       {hint && <div className="hint">{hint}</div>}
       <WhenFormatGuide />
     </form>

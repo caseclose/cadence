@@ -71,6 +71,10 @@ body {
   height: 100%;
 }
 
+html {
+  overflow-x: hidden;
+}
+
 body {
   margin: 0;
   background: var(--bg);
@@ -79,6 +83,7 @@ body {
   color: var(--text);
   font-size: 1rem;
   line-height: 1.55;
+  overflow-x: hidden;
   transition:
     background-color 0.25s ease,
     color 0.25s ease;
@@ -90,8 +95,10 @@ body {
 
 .app {
   width: min(920px, 100%);
+  max-width: 100%;
   margin: 0 auto;
   padding: 0 24px 88px;
+  overflow-x: hidden;
 }
 
 /* ── Header ───────────────────────────────────────────────────── */
@@ -233,10 +240,51 @@ section {
   gap: 12px;
 }
 
+.field-full {
+  width: 100%;
+  min-width: 0;
+}
+
+.form-actions-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.field-strategy {
+  width: 100%;
+  min-width: 0;
+}
+
+.btn-submit {
+  width: 100%;
+}
+
+@media (min-width: 520px) {
+  .form-actions-row {
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  .field-strategy {
+    flex: 1;
+    width: auto;
+  }
+
+  .btn-submit {
+    width: auto;
+    min-width: 88px;
+    flex-shrink: 0;
+  }
+}
+
 .row {
   display: flex;
   gap: 10px;
   align-items: stretch;
+  width: 100%;
+  min-width: 0;
 }
 
 .grow {
@@ -252,8 +300,9 @@ select {
   color: var(--text);
   border-radius: 10px;
   padding: 12px 14px;
-  font-size: 15px;
+  font-size: 16px; /* 16px prevents iOS zoom on focus */
   outline: none;
+  max-width: 100%;
   transition:
     border-color 0.15s,
     box-shadow 0.15s,
@@ -740,25 +789,60 @@ button.link:hover:not(:disabled) {
 /* ── Responsive ───────────────────────────────────────────────── */
 @media (max-width: 640px) {
   .app {
-    padding: 0 16px 64px;
+    padding: 0 14px 64px;
   }
 
   .header {
     flex-direction: column;
     align-items: stretch;
+    padding: 20px 0 24px;
+    gap: 20px;
   }
 
   .header-right {
-    justify-content: space-between;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    gap: 14px;
   }
 
-  .row {
+  .header-actions {
+    align-self: flex-start;
+  }
+
+  .auth-panel {
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .auth-form {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .auth-form-row {
     flex-direction: column;
   }
 
-  select,
-  button[type='submit'] {
+  .auth-input {
     width: 100%;
+    min-width: 0;
+  }
+
+  .auth-btns {
+    justify-content: flex-start;
+  }
+
+  .auth-msg {
+    text-align: left;
+  }
+
+  .form-card {
+    padding: 18px 16px;
+  }
+
+  .card {
+    padding: 16px;
   }
 
   .task {
@@ -769,13 +853,19 @@ button.link:hover:not(:disabled) {
   .task-actions {
     flex-direction: row;
     justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .modal {
+    padding: 22px 18px;
+    border-radius: 16px;
+  }
+
+  .modal-reestimate {
+    flex-direction: column;
   }
 
   .format-guide-grid {
     grid-template-columns: 1fr;
-  }
-
-  .auth-form {
-    width: 100%;
   }
 }
