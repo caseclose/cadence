@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Action, Task } from '../scheduler/types';
-import { parseEta, formatDuration } from '../util/time';
+import { parseWhen, formatDuration, formatClock } from '../util/time';
 
 interface Props {
   task: Task;
@@ -13,13 +13,22 @@ interface Props {
  * your answer into a scheduler action (done / not done / no time / reestimate).
  */
 export function ReminderModal({ task, onResolve, onClose }: Props) {
-  const [reEta, setReEta] = useState('');
-  const reMs = parseEta(reEta);
+  const [reWhen, setReWhen] = useState('');
+  const parsed = reWhen ? parseWhen(reWhen) : null;
 
   const act = (action: Action) => {
     onResolve(task.id, action);
     onClose();
   };
+
+  const hint =
+    parsed && parsed.etaMs > 0
+      ? parsed.kind === 'clock'
+        ? `将在 ${formatClock(parsed.fireAt)} 重新提醒（约 ${formatDuration(parsed.etaMs)} 后）`
+        : `将在 ${formatDuration(parsed.etaMs)} 后重新提醒`
+      : reWhen
+        ? '无法识别，试试 30m / 14:00 / 下午3点'
+        : null;
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -45,20 +54,18 @@ export function ReminderModal({ task, onResolve, onClose }: Props) {
 
         <div className="modal-reestimate">
           <input
-            placeholder="重估还要多久，如 30m"
-            value={reEta}
-            onChange={(e) => setReEta(e.target.value)}
+            placeholder="重估：30m / 14:00 / 下午3点"
+            value={reWhen}
+            onChange={(e) => setReWhen(e.target.value)}
           />
           <button
-            disabled={!reMs || reMs <= 0}
-            onClick={() => reMs && act({ type: 'reestimate', etaMs: reMs })}
+            disabled={!parsed || parsed.etaMs <= 0}
+            onClick={() => parsed && act({ type: 'reestimate', etaMs: parsed.etaMs })}
           >
             重估
           </button>
         </div>
-        {reEta && reMs && (
-          <div className="hint">将在 {formatDuration(reMs)} 后重新提醒</div>
-        )}
+        {hint && <div className="hint">{hint}</div>}
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import { FormEvent, useState } from 'react';
 import { Strategy } from '../scheduler/types';
-import { parseEta, formatDuration } from '../util/time';
+import { parseWhen, formatDuration, formatClock } from '../util/time';
 
 interface Props {
   onAdd: (input: { title: string; note?: string; strategy: Strategy; etaMs: number }) => void;
@@ -8,22 +8,31 @@ interface Props {
 
 export function TaskForm({ onAdd }: Props) {
   const [title, setTitle] = useState('');
-  const [eta, setEta] = useState('');
+  const [when, setWhen] = useState('');
   const [strategy, setStrategy] = useState<Strategy>('converging');
   const [note, setNote] = useState('');
 
-  const etaMs = parseEta(eta);
-  const canSubmit = title.trim().length > 0 && etaMs !== null && etaMs > 0;
+  const parsed = when ? parseWhen(when) : null;
+  const canSubmit = title.trim().length > 0 && parsed !== null && parsed.etaMs > 0;
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (!canSubmit || etaMs === null) return;
-    onAdd({ title: title.trim(), note: note.trim() || undefined, strategy, etaMs });
+    if (!canSubmit || !parsed) return;
+    onAdd({ title: title.trim(), note: note.trim() || undefined, strategy, etaMs: parsed.etaMs });
     setTitle('');
-    setEta('');
+    setWhen('');
     setNote('');
     setStrategy('converging');
   };
+
+  const hint = (() => {
+    if (!when) return null;
+    if (!parsed) return '无法识别，试试 1h / 90m / 14:00 / 下午3点';
+    if (parsed.kind === 'clock') {
+      return `将在 ${formatClock(parsed.fireAt)} 提醒你（约 ${formatDuration(parsed.etaMs)} 后）`;
+    }
+    return `将在 ${formatDuration(parsed.etaMs)} 后第一次提醒你`;
+  })();
 
   return (
     <form className="card form" onSubmit={submit}>
@@ -37,9 +46,10 @@ export function TaskForm({ onAdd }: Props) {
       </div>
       <div className="row">
         <input
-          placeholder="预计多久 (1h / 90m / 1h30m)"
-          value={eta}
-          onChange={(e) => setEta(e.target.value)}
+          className="grow"
+          placeholder="多久后 / 几点提醒 (1h · 90m · 14:00 · 下午3点)"
+          value={when}
+          onChange={(e) => setWhen(e.target.value)}
         />
         <select value={strategy} onChange={(e) => setStrategy(e.target.value as Strategy)}>
           <option value="converging">收敛式 (有ETA，越来越勤)</option>
@@ -57,11 +67,7 @@ export function TaskForm({ onAdd }: Props) {
           onChange={(e) => setNote(e.target.value)}
         />
       </div>
-      {eta && (
-        <div className="hint">
-          {etaMs ? `将在 ${formatDuration(etaMs)} 后第一次提醒你` : '无法识别时长，试试 1h / 30m'}
-        </div>
-      )}
+      {hint && <div className="hint">{hint}</div>}
     </form>
   );
 }
