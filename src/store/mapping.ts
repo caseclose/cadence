@@ -1,4 +1,5 @@
 import { Task } from '../scheduler/types';
+import { asNum } from './taskSanitize';
 
 /** DB row shape (snake_case) as stored in Supabase. */
 export interface TaskRow {
@@ -23,14 +24,17 @@ export function rowToTask(row: TaskRow): Task {
     title: row.title,
     note: row.note ?? undefined,
     strategy: row.strategy,
-    etaMs: row.eta_ms,
+    etaMs: asNum(row.eta_ms),
     state: row.state,
-    attempts: row.attempts,
-    nextFireAt: row.next_fire_at,
-    priority: row.priority,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    completedAt: row.completed_at ?? undefined,
+    attempts: asNum(row.attempts),
+    nextFireAt: asNum(row.next_fire_at),
+    priority: asNum(row.priority),
+    createdAt: asNum(row.created_at),
+    updatedAt: asNum(row.updated_at),
+    completedAt:
+      row.completed_at === null || row.completed_at === undefined
+        ? undefined
+        : asNum(row.completed_at),
   };
 }
 

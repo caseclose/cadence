@@ -1,11 +1,12 @@
 import { create } from 'zustand';
-import type { Session, User } from '@supabase/supabase-js';
+import type { RealtimeChannel, Session, User } from '@supabase/supabase-js';
 import { createTask, schedule } from '../scheduler/backoff';
 import { Action, BackoffConfig, DEFAULT_BACKOFF, Strategy, Task } from '../scheduler/types';
 import { supabase, isCloudEnabled } from './supabase';
 import { rowToTask, taskToRow, TaskRow } from './mapping';
 import { mapAuthError } from './authErrors';
 import { usernameToEmail, validateUsername } from './username';
+import { sanitizeTasks } from './taskSanitize';
 
 const LS_TASKS = 'cadence.tasks.v1';
 const LS_CONFIG = 'cadence.config.v1';
@@ -21,8 +22,7 @@ function loadLocal<T>(key: string, fallback: T): T {
 
 /** Guard against corrupted localStorage (non-array JSON crashes React on .filter). */
 function loadTasks(): Task[] {
-  const data = loadLocal<unknown>(LS_TASKS, []);
-  return Array.isArray(data) ? (data as Task[]) : [];
+  return sanitizeTasks(loadLocal<unknown>(LS_TASKS, []));
 }
 
 function loadConfig(): BackoffConfig {
@@ -82,6 +82,81 @@ async function deleteRemote(id: string) {
   await supabase.from('tasks').delete().eq('id', id);
 }
 
+let authListenerBound = false;
+let realtimeChannel: RealtimeChannel | null = null;
+let realtimeUid: string | null = null;
+
+function mergeTasks(local: Task[], remote: Task[]): Task[] {
+  const byId = new Map<string, Task>();
+  for (const t of local) byId.set(t.id, t);
+  for (const t of remote) {
+    const prev = byId.get(t.id);
+    if (!prev || t.updatedAt >= prev.updatedAt) byId.set(t.id, t);
+  }
+  return sanitizeTasks([...byId.values()]);
+}
+
+async function pullRemoteTasks(uid: string): Promise<Task[]> {
+  if (!supabase) return [];
+  const { data: rows, error } = await supabase.from('tasks').select('*').eq('user_id', uid);
+  if (error) {
+    console.error('pull tasks failed', error.message);
+    return [];
+  }
+  return sanitizeTasks((rows as TaskRow[] | null)?.map(rowToTask) ?? []);
+}
+
+function bindRealtime(uid: string, get: () => StoreState, set: (partial: Partial<StoreState>) => void) {
+  if (!supabase || realtimeUid === uid) return;
+  if (realtimeChannel) {
+    void supabase.removeChannel(realtimeChannel);
+    realtimeChannel = null;
+  }
+  realtimeUid = uid;
+  realtimeChannel = supabase
+    .channel(`tasks-sync-${uid}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'tasks', filter: `user_id=eq.${uid}` },
+      (payload) => {
+        const cur = sanitizeTasks(get().tasks);
+        if (payload.eventType === 'DELETE') {
+          const next = cur.filter((t) => t.id !== (payload.old as TaskRow).id);
+          set({ tasks: next });
+          saveLocal(LS_TASKS, next);
+          return;
+        }
+        const incoming = rowToTask(payload.new as TaskRow);
+        const idx = cur.findIndex((t) => t.id === incoming.id);
+        let next: Task[];
+        if (idx === -1) next = [...cur, incoming];
+        else if (incoming.updatedAt >= cur[idx].updatedAt) {
+          next = [...cur];
+          next[idx] = incoming;
+        } else next = cur;
+        next = sanitizeTasks(next);
+        set({ tasks: next });
+        saveLocal(LS_TASKS, next);
+      },
+    )
+    .subscribe();
+}
+
+async function syncRemoteTasks(
+  uid: string,
+  get: () => StoreState,
+  set: (partial: Partial<StoreState>) => void,
+) {
+  const remote = await pullRemoteTasks(uid);
+  const merged = mergeTasks(get().tasks, remote);
+  set({ tasks: merged });
+  saveLocal(LS_TASKS, merged);
+  for (const t of merged) {
+    if (!remote.find((r) => r.id === t.id)) void upsertRemote(t, uid);
+  }
+  bindRealtime(uid, get, set);
+}
+
 export const useStore = create<StoreState>((set, get) => ({
   tasks: loadTasks(),
   config: loadConfig(),
@@ -95,69 +170,37 @@ export const useStore = create<StoreState>((set, get) => ({
       return;
     }
 
-    const { data } = await supabase.auth.getSession();
-    const session: Session | null = data.session;
-    set({ user: session?.user ?? null });
+    try {
+      const { data } = await supabase.auth.getSession();
+      const session: Session | null = data.session;
+      set({ user: session?.user ?? null });
 
-    supabase.auth.onAuthStateChange((_event, s) => {
-      set({ user: s?.user ?? null });
-      if (s?.user) void get().init();
-    });
-
-    if (session?.user) {
-      const uid = session.user.id;
-      // Pull remote tasks, merge by updatedAt (last-write-wins).
-      const { data: rows } = await supabase
-        .from('tasks')
-        .select('*')
-        .eq('user_id', uid);
-      if (rows) {
-        const remote = (rows as TaskRow[]).map(rowToTask);
-        const byId = new Map<string, Task>();
-        for (const t of get().tasks) byId.set(t.id, t);
-        for (const t of remote) {
-          const local = byId.get(t.id);
-          if (!local || t.updatedAt >= local.updatedAt) byId.set(t.id, t);
-        }
-        const merged = [...byId.values()];
-        set({ tasks: merged });
-        saveLocal(LS_TASKS, merged);
-        // Push any local-only tasks up.
-        for (const t of merged) {
-          if (!remote.find((r) => r.id === t.id)) void upsertRemote(t, uid);
-        }
+      if (!authListenerBound) {
+        authListenerBound = true;
+        supabase.auth.onAuthStateChange((_event, s) => {
+          set({ user: s?.user ?? null });
+          if (s?.user) {
+            void syncRemoteTasks(s.user.id, get, set).catch((err) =>
+              console.error('sync after auth change failed', err),
+            );
+          } else {
+            realtimeUid = null;
+            if (realtimeChannel) {
+              void supabase!.removeChannel(realtimeChannel);
+              realtimeChannel = null;
+            }
+          }
+        });
       }
 
-      // Realtime: keep devices in sync.
-      supabase
-        .channel('tasks-sync')
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'tasks', filter: `user_id=eq.${uid}` },
-          (payload) => {
-            const cur = get().tasks;
-            if (payload.eventType === 'DELETE') {
-              const next = cur.filter((t) => t.id !== (payload.old as TaskRow).id);
-              set({ tasks: next });
-              saveLocal(LS_TASKS, next);
-              return;
-            }
-            const incoming = rowToTask(payload.new as TaskRow);
-            const idx = cur.findIndex((t) => t.id === incoming.id);
-            let next: Task[];
-            if (idx === -1) next = [...cur, incoming];
-            else if (incoming.updatedAt >= cur[idx].updatedAt) {
-              next = [...cur];
-              next[idx] = incoming;
-            } else next = cur;
-            set({ tasks: next });
-            saveLocal(LS_TASKS, next);
-          },
-        )
-        .subscribe();
+      if (session?.user) {
+        await syncRemoteTasks(session.user.id, get, set);
+      }
+    } catch (err) {
+      console.error('init failed', err);
+    } finally {
+      set({ ready: true });
     }
-
-    set({ ready: true });
   },
 
   addTask: (input) => {
@@ -234,7 +277,7 @@ export const useStore = create<StoreState>((set, get) => ({
   importJson: (json) => {
     try {
       const parsed = JSON.parse(json) as { tasks?: unknown; config?: BackoffConfig };
-      const tasks = Array.isArray(parsed.tasks) ? (parsed.tasks as Task[]) : [];
+      const tasks = sanitizeTasks(Array.isArray(parsed.tasks) ? parsed.tasks : []);
       set({ tasks });
       saveLocal(LS_TASKS, tasks);
       if (parsed.config) get().setConfig(parsed.config);
