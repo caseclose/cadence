@@ -102,7 +102,6 @@ export default function App() {
               </span>
               <span className="logo">Cadence</span>
             </div>
-            <p className="tagline">给每个挂起的任务，一个自适应的回访节奏</p>
           </div>
           <div className="site-toolbar">
             <div className="toolbar-cluster">
