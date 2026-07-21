@@ -42,6 +42,9 @@ export function formatFireAt(fireAt: number, now = Date.now()): string {
   if (dayDiff === 0) return clock;
   if (dayDiff === 1) return `明天 ${clock}`;
   if (dayDiff === 2) return `后天 ${clock}`;
+  if (dayDiff >= 3 && dayDiff <= 6) {
+    return `${WEEKDAY_LABELS[t.getDay()]} ${clock}`;
+  }
   return `${t.getMonth() + 1}月${t.getDate()}日 ${clock}`;
 }
 
@@ -301,15 +304,88 @@ const DAY_PREFIX: Record<string, number> = {
   大后天: 3,
 };
 
+const WEEKDAY_MAP: Record<string, number> = {
+  日: 0,
+  天: 0,
+  一: 1,
+  二: 2,
+  三: 3,
+  四: 4,
+  五: 5,
+  六: 6,
+};
+
+const WEEKDAY_LABELS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+
+interface WeekdayParts {
+  dow: number;
+  rest: string;
+  extraWeeks: number;
+}
+
+/** 周五下午2点 / 下周五14:00 / 这周五上午10点 */
+function parseWeekdayPrefix(text: string): WeekdayParts | null {
+  let extraWeeks = 0;
+  let t = text;
+
+  if (t.startsWith('下')) {
+    extraWeeks = 1;
+    t = t.slice(1);
+  } else if (t.startsWith('这') || t.startsWith('本')) {
+    t = t.replace(/^这(?:周|星期)?/, '周').replace(/^本(?:周|星期)?/, '周');
+  }
+
+  const m = t.match(/^(?:周|星期)([日天一二三四五六])(.*)$/);
+  if (!m) return null;
+
+  const dow = WEEKDAY_MAP[m[1]];
+  if (dow === undefined) return null;
+
+  return { dow, rest: m[2], extraWeeks };
+}
+
+function computeWeekdayFireAt(
+  now: number,
+  dow: number,
+  hour: number,
+  minute: number,
+  extraWeeks: number,
+): number {
+  const currentDow = new Date(now).getDay();
+  let daysAhead = (dow - currentDow + 7) % 7;
+
+  if (daysAhead === 0) {
+    const t = atLocalTime(now, 0, hour, minute);
+    if (t <= now) daysAhead = 7;
+  }
+
+  daysAhead += extraWeeks * 7;
+  return atLocalTime(now, daysAhead, hour, minute);
+}
+
+function parseWeekdayDateTime(text: string, now: number): number | null {
+  const parts = parseWeekdayPrefix(text);
+  if (!parts) return null;
+
+  const time = resolveTime(parts.rest);
+  if (!time) return null;
+
+  const t = computeWeekdayFireAt(now, parts.dow, time.hour, time.minute, parts.extraWeeks);
+  return t > now ? t : null;
+}
+
 /**
  * Parse absolute clock input into a future local timestamp.
- * Supports 14:00, 明天下午3点, 7月22日上午10点, 7/22 10:00, etc.
+ * Supports 14:00, 明天下午3点, 7月22日上午10点, 周五下午2点, etc.
  */
 export function parseClock(input: string, now = Date.now()): number | null {
   const text = input.trim().replace(/\s+/g, '');
 
   const dated = parseCalendarDatePrefix(text, now);
   if (dated) return parseAbsoluteDateTime(dated, now);
+
+  const weekday = parseWeekdayDateTime(text, now);
+  if (weekday !== null) return weekday;
 
   let dayOffset = 0;
   let rest = text;

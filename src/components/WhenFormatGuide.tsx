@@ -35,6 +35,14 @@ export function WhenFormatGuide() {
               </ul>
             </section>
             <section>
+              <h4>星期</h4>
+              <ul>
+                <li><code>周五下午2点</code></li>
+                <li><code>下周五14:00</code></li>
+                <li><code>这周五上午10点</code></li>
+              </ul>
+            </section>
+            <section>
               <h4>指定日期</h4>
               <ul>
                 <li><code>7月22日上午10点</code></li>

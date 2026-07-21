@@ -64,13 +64,30 @@ describe('parseClock calendar date', () => {
   });
 });
 
+describe('parseClock weekday', () => {
+  const now = new Date(2026, 6, 21, 10, 0, 0).getTime(); // Tue Jul 21 2026
+
+  it('parses 周五下午2点 as next Friday', () => {
+    expect(parseClock('周五下午2点', now)).toBe(new Date(2026, 6, 24, 14, 0).getTime());
+  });
+
+  it('parses 下周五下午2点 as Friday next week', () => {
+    expect(parseClock('下周五下午2点', now)).toBe(new Date(2026, 6, 31, 14, 0).getTime());
+  });
+
+  it('parses 星期五14:00', () => {
+    expect(parseClock('星期五14:00', now)).toBe(new Date(2026, 6, 24, 14, 0).getTime());
+  });
+});
+
 describe('formatFireAt', () => {
   const now = new Date(2026, 6, 21, 10, 0).getTime();
 
-  it('shows today / 明天 / date', () => {
+  it('shows today / 明天 / weekday / date', () => {
     expect(formatFireAt(new Date(2026, 6, 21, 15, 0).getTime(), now)).toBe('15:00');
     expect(formatFireAt(new Date(2026, 6, 22, 15, 0).getTime(), now)).toBe('明天 15:00');
-    expect(formatFireAt(new Date(2026, 6, 25, 15, 0).getTime(), now)).toBe('7月25日 15:00');
+    expect(formatFireAt(new Date(2026, 6, 24, 15, 0).getTime(), now)).toBe('周五 15:00');
+    expect(formatFireAt(new Date(2026, 7, 1, 15, 0).getTime(), now)).toBe('8月1日 15:00');
   });
 });
 
@@ -87,5 +104,11 @@ describe('parseWhen', () => {
     const r = parseWhen('7月22日上午10点', now)!;
     expect(r.kind).toBe('clock');
     expect(r.fireAt).toBe(new Date(2026, 6, 22, 10, 0).getTime());
+  });
+
+  it('clock path converts weekday to duration', () => {
+    const r = parseWhen('周五下午2点', now)!;
+    expect(r.kind).toBe('clock');
+    expect(r.fireAt).toBe(new Date(2026, 6, 24, 14, 0).getTime());
   });
 });
