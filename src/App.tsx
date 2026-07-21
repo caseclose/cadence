@@ -8,6 +8,7 @@ import { TaskCard } from './components/TaskCard';
 import { ReminderModal } from './components/ReminderModal';
 import { AuthBar } from './components/AuthBar';
 import { ThemeToggle } from './components/ThemeToggle';
+import { ProjectIntro } from './components/ProjectIntro';
 
 export default function App() {
   const {
@@ -118,6 +119,7 @@ export default function App() {
       </header>
 
       <main className="main">
+        <ProjectIntro />
         <TaskForm onAdd={addTask} disabled={!canManageTasks} />
 
         <section>
