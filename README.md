@@ -47,7 +47,7 @@
 
 - **挂起 + 自适应提醒**：到点四选一（完成 / 还没好 / 没空看 / 重估）
 - **备忘录（Markdown）**：任务可附带长上下文（命令、链接、检查清单）；居中宽模态编辑/预览，到点提醒时一并展示；云端同步时随任务 E2EE 加密
-- **后台提醒**：Web Push；国内推荐飞书 / 企微 / 钉钉 Webhook（见 [docs/PUSH.md](docs/PUSH.md)）
+- **后台提醒**：Web Push；国内推荐飞书 / 企微 / 钉钉 Webhook；可单独选择是否发送任务明文（见 [docs/PUSH.md](docs/PUSH.md)）
 - **可选云同步**：Supabase Auth + Realtime；未配置时纯本地 localStorage
 
 ## 通知方式

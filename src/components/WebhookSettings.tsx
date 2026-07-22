@@ -13,10 +13,12 @@ import {
 export function WebhookSettings() {
   const user = useStore((s) => s.user);
   const cloudEnabled = useStore((s) => s.cloudEnabled);
+  const syncWebhookContent = useStore((s) => s.syncWebhookContent);
   const [hooks, setHooks] = useState<NotificationWebhook[]>([]);
   const [provider, setProvider] = useState<WebhookProvider>('feishu');
   const [url, setUrl] = useState('');
   const [secret, setSecret] = useState('');
+  const [includeContent, setIncludeContent] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [msgOk, setMsgOk] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -34,9 +36,11 @@ export function WebhookSettings() {
     if (row) {
       setUrl(row.url);
       setSecret(row.secret ?? '');
+      setIncludeContent(row.include_content ?? false);
     } else {
       setUrl('');
       setSecret('');
+      setIncludeContent(false);
     }
   }, [provider, hooks]);
 
@@ -60,6 +64,7 @@ export function WebhookSettings() {
       url,
       secret,
       enabled: true,
+      includeContent,
     });
     setBusy(false);
     if (err) {
@@ -69,6 +74,7 @@ export function WebhookSettings() {
     setMsgOk(true);
     setMsg('已保存。可点「发送测试」立刻验证；到点后也会自动发到该群。');
     await reload();
+    await syncWebhookContent();
   };
 
   const remove = async () => {
@@ -86,6 +92,7 @@ export function WebhookSettings() {
     setMsgOk(true);
     setMsg('已删除该通道');
     await reload();
+    await syncWebhookContent();
   };
 
   const test = async () => {
@@ -100,6 +107,7 @@ export function WebhookSettings() {
         url,
         secret,
         enabled: true,
+        includeContent,
       });
       if (saveErr) {
         setBusy(false);
@@ -107,6 +115,7 @@ export function WebhookSettings() {
         return;
       }
       await reload();
+      await syncWebhookContent();
     }
     const err = await testSavedWebhooks();
     setBusy(false);
@@ -151,6 +160,18 @@ export function WebhookSettings() {
         </div>
 
         <p className="webhook-hint">{active.hint}</p>
+
+        <label className="webhook-content-toggle">
+          <input
+            type="checkbox"
+            checked={includeContent}
+            onChange={(e) => setIncludeContent(e.target.checked)}
+          />
+          <span>发送任务明文内容（标题和备忘录）</span>
+        </label>
+        <p className="webhook-content-warning">
+          开启后，任务标题和备忘录会上传到云端并发送给机器人平台；默认关闭以保持端到端加密边界。
+        </p>
 
         <label className="webhook-label">
           Webhook URL

@@ -9,6 +9,7 @@ export interface NotificationWebhook {
   url: string;
   secret: string | null;
   enabled: boolean;
+  include_content: boolean;
   created_at: number;
   updated_at: number;
 }
@@ -55,6 +56,7 @@ export async function upsertWebhook(input: {
   url: string;
   secret?: string;
   enabled?: boolean;
+  includeContent?: boolean;
 }): Promise<string | null> {
   if (!supabase) return '未配置云同步';
   const url = input.url.trim();
@@ -75,6 +77,7 @@ export async function upsertWebhook(input: {
         url,
         secret: input.secret?.trim() || null,
         enabled: input.enabled ?? true,
+        include_content: input.includeContent ?? false,
         updated_at: now,
       })
       .eq('id', existing.id);
@@ -88,6 +91,7 @@ export async function upsertWebhook(input: {
     url,
     secret: input.secret?.trim() || null,
     enabled: input.enabled ?? true,
+    include_content: input.includeContent ?? false,
     created_at: now,
     updated_at: now,
   });

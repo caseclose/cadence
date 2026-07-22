@@ -9,10 +9,17 @@ create table if not exists public.notification_webhooks (
   url text not null,
   secret text,
   enabled boolean not null default true,
+  include_content boolean not null default false,
   created_at bigint not null default (extract(epoch from now()) * 1000)::bigint,
   updated_at bigint not null default (extract(epoch from now()) * 1000)::bigint,
   unique (user_id, provider)
 );
+
+alter table public.notification_webhooks
+  add column if not exists include_content boolean not null default false;
+
+alter table public.tasks add column if not exists webhook_title text;
+alter table public.tasks add column if not exists webhook_note text;
 
 create index if not exists notification_webhooks_user_idx
   on public.notification_webhooks (user_id);

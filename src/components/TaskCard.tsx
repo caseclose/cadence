@@ -1,6 +1,7 @@
 import { Task } from '../scheduler/types';
 import { formatRelative, formatDuration } from '../util/time';
 import { noteSummary } from '../util/markdown';
+import { useState } from 'react';
 
 interface Props {
   task: Task;
@@ -8,6 +9,7 @@ interface Props {
   onCheck: (id: string) => void;
   onDelete: (id: string) => void;
   onOpenMemo?: (id: string) => void;
+  onUpdateTitle?: (id: string, title: string) => void;
   done?: boolean;
 }
 
@@ -19,16 +21,44 @@ const stateLabel: Record<Task['state'], string> = {
   done: '已完成',
 };
 
-export function TaskCard({ task, now, onCheck, onDelete, onOpenMemo, done }: Props) {
+export function TaskCard({ task, now, onCheck, onDelete, onOpenMemo, onUpdateTitle, done }: Props) {
   const overdue = !done && task.nextFireAt <= now && task.state !== 'done';
   const locked = task.title === '[e2ee]';
   const summary = task.note?.trim() ? noteSummary(task.note) : '';
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(task.title);
+  const saveTitle = () => {
+    const next = titleDraft.trim();
+    if (next && next !== task.title) onUpdateTitle?.(task.id, next);
+    setEditingTitle(false);
+  };
   return (
     <div className={`card task ${overdue ? 'overdue' : ''} ${done ? 'done-card' : ''}`}>
       <div className="task-main">
-        <div className={`task-title ${locked ? 'task-title-locked' : ''}`}>
-          {locked ? '🔒 任务已加密，输入密码进行本地解密' : task.title}
-        </div>
+        {editingTitle ? (
+          <input
+            className="task-title-editor"
+            value={titleDraft}
+            autoFocus
+            onChange={(e) => setTitleDraft(e.target.value)}
+            onBlur={saveTitle}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') saveTitle();
+              if (e.key === 'Escape') { setTitleDraft(task.title); setEditingTitle(false); }
+            }}
+            aria-label="编辑任务名称"
+          />
+        ) : (
+          <button
+            type="button"
+            className={`task-title task-title-button ${locked ? 'task-title-locked' : ''}`}
+            disabled={locked || !onUpdateTitle}
+            onClick={() => setEditingTitle(true)}
+            title={locked ? '解锁后查看任务名称' : '点击编辑任务名称'}
+          >
+            {locked ? '🔒 任务已加密，输入密码进行本地解密' : task.title}
+          </button>
+        )}
         {summary && !locked && (
           <button
             type="button"

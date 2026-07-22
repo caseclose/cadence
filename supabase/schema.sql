@@ -19,8 +19,12 @@ create table if not exists public.tasks (
   updated_at bigint not null,
   completed_at bigint,
   -- E2EE ciphertext for task body (title/note/etc.). When set, plaintext
-  -- columns are placeholders except next_fire_at / state (needed for server push).
+  -- columns are placeholders except next_fire_at / state (needed for server push);
+  -- webhook_title / webhook_note are populated only when Webhook plaintext is enabled.
   enc text,
+  -- Optional plaintext mirror used only by explicitly enabled Webhooks.
+  webhook_title text,
+  webhook_note text,
   -- Last next_fire_at value for which a Web Push was already sent (dedupe).
   notified_fire_at bigint
 );
@@ -99,6 +103,7 @@ create table if not exists public.notification_webhooks (
   -- Optional signing secret (钉钉 SEC / 飞书签名校验)
   secret text,
   enabled boolean not null default true,
+  include_content boolean not null default false,
   created_at bigint not null default (extract(epoch from now()) * 1000)::bigint,
   updated_at bigint not null default (extract(epoch from now()) * 1000)::bigint,
   unique (user_id, provider)

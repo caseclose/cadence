@@ -24,6 +24,7 @@ export default function App() {
     addTask,
     applyAction,
     updateTaskNote,
+    updateTaskTitle,
     deleteTask,
     exportJson,
     importJson,
@@ -169,6 +170,7 @@ export default function App() {
                 onCheck={(id) => setQueue((q) => (q.includes(id) ? q : [id, ...q]))}
                 onDelete={deleteTask}
                 onOpenMemo={setMemoId}
+                onUpdateTitle={updateTaskTitle}
               />
             ))}
           </div>
@@ -189,6 +191,7 @@ export default function App() {
                   onCheck={() => {}}
                   onDelete={deleteTask}
                   onOpenMemo={setMemoId}
+                  onUpdateTitle={updateTaskTitle}
                 />
               ))}
             </div>

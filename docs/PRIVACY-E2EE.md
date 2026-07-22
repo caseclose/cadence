@@ -51,7 +51,8 @@
 ## 给运维 / 开发者的说明
 
 - 即使拥有 `service_role` key，也只能读到 `enc` 密文和加密后的私钥备份
-- **例外（后台推送）**：为调度 Web Push，云端可读每个任务的 `next_fire_at` 与 `state`；推送文案不含任务内容。见 [PUSH.md](PUSH.md)
+- **例外（后台推送）**：为调度 Web Push，云端可读每个任务的 `next_fire_at` 与 `state`；默认推送文案不含任务内容。
+- **可选例外（Webhook 明文）**：若用户主动开启提醒通道中的「发送任务明文内容」，标题和备忘录会同步到专用明文字段并发送给已启用的机器人平台。关闭后会清空这些副本。见 [PUSH.md](PUSH.md)
 - 不要在服务端实现「解密接口」——那会破坏 E2EE 保证
 - 算法与实现见 [`src/crypto/e2ee.ts`](../src/crypto/e2ee.ts)、[`src/crypto/keyring.ts`](../src/crypto/keyring.ts)
 

@@ -27,6 +27,8 @@ interface DueTask {
   next_fire_at: number;
   state: string;
   notified_fire_at: number | null;
+  webhook_title: string | null;
+  webhook_note: string | null;
 }
 
 interface PushSub {
@@ -44,6 +46,7 @@ interface WebhookRow {
   url: string;
   secret: string | null;
   enabled: boolean;
+  include_content: boolean;
 }
 
 Deno.serve(async (req) => {
@@ -86,7 +89,7 @@ Deno.serve(async (req) => {
       });
       const { data: hooks, error: hookErr } = await admin
         .from('notification_webhooks')
-        .select('id, user_id, provider, url, secret, enabled')
+        .select('id, user_id, provider, url, secret, enabled, include_content')
         .eq('user_id', userData.user.id)
         .eq('enabled', true);
       if (hookErr) return json({ error: hookErr.message }, 500);
@@ -117,7 +120,7 @@ Deno.serve(async (req) => {
 
     const { data: dueRows, error: dueErr } = await admin
       .from('tasks')
-      .select('id, user_id, next_fire_at, state, notified_fire_at')
+      .select('id, user_id, next_fire_at, state, notified_fire_at, webhook_title, webhook_note')
       .neq('state', 'done')
       .lte('next_fire_at', now);
 
@@ -209,7 +212,10 @@ Deno.serve(async (req) => {
 
       for (const hook of userHooks) {
         try {
-          const r = await sendChatWebhook(hook, REMINDER_TEXT);
+          const text = hook.include_content
+            ? formatWebhookReminder(due.filter((t) => t.user_id === userId))
+            : REMINDER_TEXT;
+          const r = await sendChatWebhook(hook, text);
           if (r.ok) {
             webhookSent += 1;
             userDelivered = true;
@@ -262,6 +268,16 @@ Deno.serve(async (req) => {
     return json({ error: err instanceof Error ? err.message : String(err) }, 500);
   }
 });
+
+
+function formatWebhookReminder(tasks: DueTask[]): string {
+  const lines = ['Cadence · 任务到点提醒'];
+  for (const task of tasks) {
+    lines.push(`\n【${task.webhook_title || '未命名任务'}】`);
+    if (task.webhook_note?.trim()) lines.push(task.webhook_note.trim());
+  }
+  return lines.join('\n');
+}
 
 async function sendChatWebhook(
   hook: WebhookRow,

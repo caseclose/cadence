@@ -462,6 +462,27 @@ body {
   color: var(--text);
 }
 
+ .webhook-content-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.webhook-content-toggle input {
+  width: 16px;
+  height: 16px;
+}
+
+.webhook-content-warning {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .webhook-actions {
   display: flex;
   gap: 8px;
@@ -1227,6 +1248,31 @@ button.link:hover:not(:disabled) {
   font-size: 16px;
   font-weight: 600;
   letter-spacing: -0.01em;
+}
+
+.task-title-button {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: text;
+}
+
+.task-title-button:hover:not(:disabled) {
+  color: var(--accent);
+}
+
+.task-title-button:disabled {
+  cursor: default;
+}
+
+.task-title-editor {
+  width: 100%;
+  padding: 4px 8px;
+  font-size: 16px;
 }
 
 .task-title-locked {

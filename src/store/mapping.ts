@@ -21,6 +21,8 @@ export interface TaskRow {
   enc?: string | null;
   /** Last next_fire_at for which a Web Push was sent (server-side dedupe). */
   notified_fire_at?: number | null;
+  webhook_title?: string | null;
+  webhook_note?: string | null;
 }
 
 const PLACEHOLDER_TITLE = '[e2ee]';
@@ -79,10 +81,17 @@ export function taskToRowPlain(task: Task, userId: string): TaskRow {
     updated_at: task.updatedAt,
     completed_at: task.completedAt ?? null,
     enc: null,
+    webhook_title: null,
+    webhook_note: null,
   };
 }
 
-export async function taskToRow(task: Task, userId: string, dek: CryptoKey | null): Promise<TaskRow> {
+export async function taskToRow(
+  task: Task,
+  userId: string,
+  dek: CryptoKey | null,
+  includeWebhookContent = false,
+): Promise<TaskRow> {
   if (!dek) return taskToRowPlain(task, userId);
   const enc = await encryptTaskPayload(dek, task);
   // Content stays in enc; expose timing/state so the server can fire Web Push
@@ -102,5 +111,7 @@ export async function taskToRow(task: Task, userId: string, dek: CryptoKey | nul
     updated_at: task.updatedAt,
     completed_at: null,
     enc,
+    webhook_title: includeWebhookContent ? task.title : null,
+    webhook_note: includeWebhookContent ? task.note ?? null : null,
   };
 }

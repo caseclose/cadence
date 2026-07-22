@@ -114,6 +114,8 @@ interface StoreState {
   }) => void;
   applyAction: (id: string, action: Action) => void;
   updateTaskNote: (id: string, note: string) => void;
+  updateTaskTitle: (id: string, title: string) => void;
+  syncWebhookContent: () => Promise<void>;
   deleteTask: (id: string) => void;
   setConfig: (patch: Partial<BackoffConfig>) => void;
 
@@ -129,7 +131,15 @@ interface StoreState {
 
 async function upsertRemote(task: Task, userId: string) {
   if (!supabase) return;
-  const row = await taskToRow(task, userId, getDek());
+  const { data: hooks } = await supabase
+    .from('notification_webhooks')
+    .select('include_content')
+    .eq('user_id', userId)
+    .eq('enabled', true);
+  const includeWebhookContent = (hooks ?? []).some(
+    (hook) => hook.include_content === true,
+  );
+  const row = await taskToRow(task, userId, getDek(), includeWebhookContent);
   await supabase.from('tasks').upsert(row);
 }
 
@@ -396,6 +406,30 @@ export const useStore = create<StoreState>((set, get) => ({
     saveTasks(next, get().user?.id ?? null);
     const uid = get().user?.id;
     if (uid && updated) void upsertRemote(updated, uid);
+  },
+
+  updateTaskTitle: (id, title) => {
+    if (get().e2eeLocked) return;
+    const trimmed = title.trim();
+    if (!trimmed) return;
+    let updated: Task | null = null;
+    const next = get().tasks.map((t) => {
+      if (t.id !== id) return t;
+      updated = { ...t, title: trimmed, updatedAt: Date.now() };
+      return updated;
+    });
+    set({ tasks: next });
+    saveTasks(next, get().user?.id ?? null);
+    const uid = get().user?.id;
+    if (uid && updated) void upsertRemote(updated, uid);
+  },
+
+  syncWebhookContent: async () => {
+    const uid = get().user?.id;
+    if (!uid) return;
+    for (const task of get().tasks) {
+      await upsertRemote(task, uid);
+    }
   },
 
   deleteTask: (id) => {
