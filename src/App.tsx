@@ -118,7 +118,7 @@ export default function App() {
               <ThemeToggle />
               {notifPerm !== 'granted' && (
                 <button type="button" className="toolbar-btn" onClick={enableNotifications}>
-                  开启通知
+                  开启网页通知
                 </button>
               )}
             </div>
@@ -197,7 +197,12 @@ export default function App() {
       </main>
 
       {currentDue && (
-        <ReminderModal task={currentDue} onResolve={applyAction} onClose={closeCurrent} />
+        <ReminderModal
+          task={currentDue}
+          onResolve={applyAction}
+          onClose={closeCurrent}
+          onOpenMemo={setMemoId}
+        />
       )}
       {memoTask && (
         <MemoModal

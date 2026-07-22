@@ -8,13 +8,14 @@ interface Props {
   task: Task;
   onResolve: (id: string, action: Action) => void;
   onClose: () => void;
+  onOpenMemo?: (id: string) => void;
 }
 
 /**
  * The core interaction: when a task is due, ask you what happened and turn
  * your answer into a scheduler action (done / not done / no time / reestimate).
  */
-export function ReminderModal({ task, onResolve, onClose }: Props) {
+export function ReminderModal({ task, onResolve, onClose, onOpenMemo }: Props) {
   const [reWhen, setReWhen] = useState('');
   const parsed = reWhen ? parseWhen(reWhen) : null;
 
@@ -43,10 +44,19 @@ export function ReminderModal({ task, onResolve, onClose }: Props) {
         </div>
 
         {task.note?.trim() && (
-          <div className="modal-memo">
+          <button
+            type="button"
+            className="modal-memo"
+            onClick={() => {
+              onClose();
+              onOpenMemo?.(task.id);
+            }}
+            title="点击打开备忘录编辑"
+          >
             <div className="modal-memo-label">备忘录</div>
             <MarkdownView source={task.note} className="modal-memo-body" />
-          </div>
+            <div className="modal-memo-edit-hint">点击备忘录开始编辑</div>
+          </button>
         )}
 
         <div className="modal-actions">

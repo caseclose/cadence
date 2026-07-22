@@ -84,7 +84,7 @@ export function AuthBar() {
             }
             onClick={() => void togglePush()}
           >
-            {pushBusy ? '…' : pushOn ? '推送已开启' : '开启推送'}
+            {pushBusy ? '…' : pushOn ? '后台推送已开启' : '开启后台推送'}
           </button>
         )}
         <button type="button" className="btn-sm btn-ghost" onClick={() => void signOut()}>

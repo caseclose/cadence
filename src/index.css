@@ -1362,6 +1362,11 @@ button.link:hover:not(:disabled) {
 }
 
 .modal-memo {
+  display: block;
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  text-align: left;
   margin: -8px 0 20px;
   padding: 12px 14px;
   border: 1px solid var(--border);
@@ -1369,6 +1374,20 @@ button.link:hover:not(:disabled) {
   background: var(--panel-2);
   max-height: 220px;
   overflow: auto;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.modal-memo:hover {
+  border-color: var(--accent);
+  background: var(--bg-subtle);
+}
+
+.modal-memo-edit-hint {
+  margin-top: 10px;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .modal-memo-label {
