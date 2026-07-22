@@ -110,6 +110,7 @@ interface StoreState {
     priority?: number;
   }) => void;
   applyAction: (id: string, action: Action) => void;
+  updateTaskNote: (id: string, note: string) => void;
   deleteTask: (id: string) => void;
   setConfig: (patch: Partial<BackoffConfig>) => void;
 
@@ -333,6 +334,25 @@ export const useStore = create<StoreState>((set, get) => ({
     const next = get().tasks.map((t) => {
       if (t.id !== id) return t;
       updated = schedule(t, action, now, cfg);
+      return updated;
+    });
+    set({ tasks: next });
+    saveTasks(next, get().user?.id ?? null);
+    const uid = get().user?.id;
+    if (uid && updated) void upsertRemote(updated, uid);
+  },
+
+  updateTaskNote: (id, note) => {
+    if (get().e2eeLocked) return;
+    const trimmed = note.trim();
+    let updated: Task | null = null;
+    const next = get().tasks.map((t) => {
+      if (t.id !== id) return t;
+      updated = {
+        ...t,
+        note: trimmed || undefined,
+        updatedAt: Date.now(),
+      };
       return updated;
     });
     set({ tasks: next });

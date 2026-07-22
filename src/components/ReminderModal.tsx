@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Action, Task } from '../scheduler/types';
 import { parseWhen, formatDuration, formatFireAt } from '../util/time';
 import { WhenFormatGuide } from './WhenFormatGuide';
+import { MarkdownView } from './MarkdownView';
 
 interface Props {
   task: Task;
@@ -40,6 +41,13 @@ export function ReminderModal({ task, onResolve, onClose }: Props) {
             ? '按预计现在应该差不多完成了。当前状态如何？'
             : '轮到检查这个挂起任务了。有进展吗？'}
         </div>
+
+        {task.note?.trim() && (
+          <div className="modal-memo">
+            <div className="modal-memo-label">备忘录</div>
+            <MarkdownView source={task.note} className="modal-memo-body" />
+          </div>
+        )}
 
         <div className="modal-actions">
           <button type="button" className="primary" onClick={() => act({ type: 'done' })}>

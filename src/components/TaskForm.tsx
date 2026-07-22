@@ -69,9 +69,10 @@ export function TaskForm({ onAdd, disabled }: Props) {
           挂起
         </button>
       </div>
-      <input
-        className="field-full subtle"
-        placeholder="备注（可选）"
+      <textarea
+        className="field-full subtle note-field"
+        rows={3}
+        placeholder="备忘录（可选，支持 Markdown：命令、链接、检查清单…）"
         value={note}
         onChange={(e) => setNote(e.target.value)}
         disabled={disabled}

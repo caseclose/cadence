@@ -1,11 +1,13 @@
 import { Task } from '../scheduler/types';
 import { formatRelative, formatDuration } from '../util/time';
+import { noteSummary } from '../util/markdown';
 
 interface Props {
   task: Task;
   now: number;
   onCheck: (id: string) => void;
   onDelete: (id: string) => void;
+  onOpenMemo?: (id: string) => void;
   done?: boolean;
 }
 
@@ -17,16 +19,26 @@ const stateLabel: Record<Task['state'], string> = {
   done: '已完成',
 };
 
-export function TaskCard({ task, now, onCheck, onDelete, done }: Props) {
+export function TaskCard({ task, now, onCheck, onDelete, onOpenMemo, done }: Props) {
   const overdue = !done && task.nextFireAt <= now && task.state !== 'done';
   const locked = task.title === '[e2ee]';
+  const summary = task.note?.trim() ? noteSummary(task.note) : '';
   return (
     <div className={`card task ${overdue ? 'overdue' : ''} ${done ? 'done-card' : ''}`}>
       <div className="task-main">
         <div className={`task-title ${locked ? 'task-title-locked' : ''}`}>
           {locked ? '🔒 任务已加密，输入密码进行本地解密' : task.title}
         </div>
-        {task.note && <div className="task-note">{task.note}</div>}
+        {summary && !locked && (
+          <button
+            type="button"
+            className="task-note-summary"
+            onClick={() => onOpenMemo?.(task.id)}
+            title="打开备忘录"
+          >
+            {summary}
+          </button>
+        )}
         <div className="task-meta">
           <span className={`badge s-${task.state}`}>{stateLabel[task.state]}</span>
           <span className="badge strategy">
@@ -43,6 +55,11 @@ export function TaskCard({ task, now, onCheck, onDelete, done }: Props) {
       </div>
       {!done && (
         <div className="task-actions">
+          {onOpenMemo && !locked && (
+            <button type="button" className="ghost" onClick={() => onOpenMemo(task.id)}>
+              {task.note?.trim() ? '备忘录' : '写备忘录'}
+            </button>
+          )}
           <button type="button" className="ghost" onClick={() => onCheck(task.id)}>
             现在查看
           </button>
@@ -53,6 +70,11 @@ export function TaskCard({ task, now, onCheck, onDelete, done }: Props) {
       )}
       {done && (
         <div className="task-actions">
+          {onOpenMemo && task.note?.trim() && !locked && (
+            <button type="button" className="ghost" onClick={() => onOpenMemo(task.id)}>
+              备忘录
+            </button>
+          )}
           <button type="button" className="ghost danger" onClick={() => onDelete(task.id)}>
             删除
           </button>

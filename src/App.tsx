@@ -11,6 +11,7 @@ import { ThemeToggle } from './components/ThemeToggle';
 import { ProjectIntro } from './components/ProjectIntro';
 import { UnlockVault } from './components/UnlockVault';
 import { WebhookSettings } from './components/WebhookSettings';
+import { MemoDrawer } from './components/MemoDrawer';
 
 export default function App() {
   const {
@@ -22,6 +23,7 @@ export default function App() {
     init,
     addTask,
     applyAction,
+    updateTaskNote,
     deleteTask,
     exportJson,
     importJson,
@@ -31,6 +33,7 @@ export default function App() {
 
   const [now, setNow] = useState(Date.now());
   const [queue, setQueue] = useState<string[]>([]); // ids of due tasks awaiting your response
+  const [memoId, setMemoId] = useState<string | null>(null);
   const [notifPerm, setNotifPerm] = useState<NotificationPermission>(
     typeof Notification !== 'undefined' ? Notification.permission : 'denied',
   );
@@ -74,6 +77,10 @@ export default function App() {
   const currentDue = useMemo(
     () => tasks.find((t) => t.id === queue[0]) ?? null,
     [tasks, queue],
+  );
+  const memoTask = useMemo(
+    () => (memoId ? (tasks.find((t) => t.id === memoId) ?? null) : null),
+    [tasks, memoId],
   );
 
   const closeCurrent = () => setQueue((q) => q.slice(1));
@@ -161,6 +168,7 @@ export default function App() {
                 now={now}
                 onCheck={(id) => setQueue((q) => (q.includes(id) ? q : [id, ...q]))}
                 onDelete={deleteTask}
+                onOpenMemo={setMemoId}
               />
             ))}
           </div>
@@ -180,6 +188,7 @@ export default function App() {
                   done
                   onCheck={() => {}}
                   onDelete={deleteTask}
+                  onOpenMemo={setMemoId}
                 />
               ))}
             </div>
@@ -189,6 +198,13 @@ export default function App() {
 
       {currentDue && (
         <ReminderModal task={currentDue} onResolve={applyAction} onClose={closeCurrent} />
+      )}
+      {memoTask && (
+        <MemoDrawer
+          task={memoTask}
+          onSave={updateTaskNote}
+          onClose={() => setMemoId(null)}
+        />
       )}
     </div>
   );
