@@ -273,7 +273,7 @@ Deno.serve(async (req) => {
 function formatWebhookReminder(tasks: DueTask[]): string {
   const lines = ['Cadence · 任务到点提醒'];
   for (const task of tasks) {
-    lines.push(`\n【${task.webhook_title || '未命名任务'}】`);
+    lines.push(`\n[${task.webhook_title || '未命名任务'}]`);
     if (task.webhook_note?.trim()) lines.push(task.webhook_note.trim());
   }
   return lines.join('\n');
