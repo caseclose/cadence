@@ -40,7 +40,7 @@ npm run dev          # http://localhost:5173/
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 目录结构、数据流、调度引擎原理 |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | 本地开发 / 本地部署 / GitHub Pages / Supabase 配置 |
 | [docs/PRIVACY-E2EE.md](docs/PRIVACY-E2EE.md) | 端到端加密机制（可转发给关心隐私的用户） |
-| [docs/PUSH.md](docs/PUSH.md) | 手机后台推送（Web Push + PWA） |
+| [docs/PUSH.md](docs/PUSH.md) | 后台提醒：Web Push + 飞书/企微/钉钉 Webhook |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | 开发约定与贡献流程 |
 
 ## 许可证

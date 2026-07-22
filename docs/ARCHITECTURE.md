@@ -94,8 +94,9 @@ src/
 ## 后台推送（可选）
 
 - 前端：`public/sw.js` + `src/notify/push.ts`；登录后可点「开启推送」
-- 后端：`supabase/functions/push-due` + `pg_cron` 每分钟扫描到点任务
-- 运维步骤与 iOS「添加到主屏幕」要求见 [PUSH.md](PUSH.md)
+- **国内推荐**：`src/notify/webhooks.ts` + `WebhookSettings` — 飞书 / 企微 / 钉钉群机器人
+- 后端：`supabase/functions/push-due` 同时发 Web Push 与 Webhook；`pg_cron` 每分钟扫描
+- 运维与平台说明见 [PUSH.md](PUSH.md)
 
 ## 已知局限与后续
 

@@ -10,6 +10,7 @@ import { AuthBar } from './components/AuthBar';
 import { ThemeToggle } from './components/ThemeToggle';
 import { ProjectIntro } from './components/ProjectIntro';
 import { UnlockVault } from './components/UnlockVault';
+import { WebhookSettings } from './components/WebhookSettings';
 
 export default function App() {
   const {
@@ -122,6 +123,7 @@ export default function App() {
       <main className="main">
         <ProjectIntro />
         {user && e2eeLocked && <UnlockVault />}
+        {user && !e2eeLocked && <WebhookSettings />}
         <TaskForm onAdd={addTask} disabled={!canManageTasks} />
 
         <section>

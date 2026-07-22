@@ -3,6 +3,6 @@
 - [ARCHITECTURE.md](ARCHITECTURE.md) — 目录结构、数据流、调度引擎原理
 - [DEPLOYMENT.md](DEPLOYMENT.md) — 本地开发 / 本地部署 / GitHub Pages / Supabase 配置
 - [PRIVACY-E2EE.md](PRIVACY-E2EE.md) — 端到端加密机制（可转发给关心隐私的用户）
-- [PUSH.md](PUSH.md) — 手机后台推送（Web Push + PWA）运维与使用
+- [PUSH.md](PUSH.md) — 后台提醒：Web Push + 飞书 / 企微 / 钉钉 Webhook
 
 贡献流程见根目录 [../CONTRIBUTING.md](../CONTRIBUTING.md)。
