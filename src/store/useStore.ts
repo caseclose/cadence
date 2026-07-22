@@ -1,10 +1,13 @@
 import { create } from 'zustand';
 import type { RealtimeChannel, Session, User } from '@supabase/supabase-js';
 import {
+  clearKeyringSession,
   getDek,
   isKeyringUnlocked,
   lockKeyring,
+  persistKeyringSession,
   setupKeyring,
+  tryRestoreKeyringSession,
   unlockKeyring,
   userHasE2EE,
 } from '../crypto/keyring';
@@ -248,23 +251,36 @@ async function ensureE2EEWithPassword(user: User, username: string, password: st
       });
       if (error) return mapAuthError(error.message);
     }
+    await persistKeyringSession(user.id);
     return null;
   } catch {
     return '密码错误，无法解锁端到端加密';
   }
 }
 
-function clearSessionTasks(set: (partial: Partial<StoreState>) => void) {
+function clearSessionTasks(set: (partial: Partial<StoreState>) => void, userId?: string | null) {
   realtimeUid = null;
   if (realtimeChannel && supabase) {
     void supabase.removeChannel(realtimeChannel);
     realtimeChannel = null;
   }
   lockKeyring();
+  clearKeyringSession(userId ?? undefined);
   void unsubscribeFromPush().catch(() => {
     /* best-effort */
   });
   set({ tasks: [], e2eeEnabled: false, e2eeLocked: false });
+}
+
+async function restoreE2EEFlags(user: User | null): Promise<{
+  e2eeEnabled: boolean;
+  e2eeLocked: boolean;
+}> {
+  const flags = syncE2EEFlags(user);
+  if (!user || !flags.e2eeLocked) return flags;
+  const ok = await tryRestoreKeyringSession(user.id);
+  if (!ok) return flags;
+  return { e2eeEnabled: true, e2eeLocked: false };
 }
 
 export const useStore = create<StoreState>((set, get) => ({
@@ -285,19 +301,27 @@ export const useStore = create<StoreState>((set, get) => ({
     try {
       const { data } = await supabase.auth.getSession();
       const session: Session | null = data.session;
-      set({ user: session?.user ?? null, ...syncE2EEFlags(session?.user ?? null) });
+      const user = session?.user ?? null;
+      const e2eeFlags = await restoreE2EEFlags(user);
+      set({ user, ...e2eeFlags });
 
       if (!authListenerBound) {
         authListenerBound = true;
         supabase.auth.onAuthStateChange((_event, s) => {
-          set({ user: s?.user ?? null, ...syncE2EEFlags(s?.user ?? null) });
-          if (s?.user) {
-            void syncRemoteTasks(s.user.id, get, set).catch((err) =>
-              console.error('sync after auth change failed', err),
-            );
-          } else {
-            clearSessionTasks(set);
-          }
+          void (async () => {
+            if (!s?.user) {
+              clearSessionTasks(set, get().user?.id);
+              set({ user: null });
+              return;
+            }
+            const flags = await restoreE2EEFlags(s.user);
+            set({ user: s.user, ...flags });
+            try {
+              await syncRemoteTasks(s.user.id, get, set);
+            } catch (err) {
+              console.error('sync after auth change failed', err);
+            }
+          })();
         });
       }
 
@@ -448,8 +472,9 @@ export const useStore = create<StoreState>((set, get) => ({
 
   signOut: async () => {
     if (!supabase) return;
+    const uid = get().user?.id;
     await supabase.auth.signOut();
-    clearSessionTasks(set);
+    clearSessionTasks(set, uid);
     set({ user: null });
   },
 

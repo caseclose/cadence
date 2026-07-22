@@ -23,7 +23,8 @@ export function UnlockVault() {
     <div className="vault-card card">
       <h3 className="vault-title">🔐 解锁端到端加密</h3>
       <p className="vault-copy">
-        你的任务在云端以<strong>密文</strong>存储。私钥由登录密码保护，仅在本机内存中解密——刷新页面后需再输入一次密码。
+        你的任务在云端以<strong>密文</strong>存储。私钥由登录密码保护。解锁后本机可免密约
+        <strong>6 小时</strong>（刷新页面仍保持解锁）；过期或退出登录后需再输入密码。
       </p>
       <div className="vault-row">
         <input

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Task } from '../scheduler/types';
 import { MarkdownView } from './MarkdownView';
 
@@ -8,35 +8,65 @@ interface Props {
   onClose: () => void;
 }
 
+const AUTOSAVE_MS = 400;
+
 /**
- * Wide centered memo modal: edit Markdown context, preview rendered output.
+ * Wide centered memo modal with debounced autosave.
  */
 export function MemoModal({ task, onSave, onClose }: Props) {
   const [draft, setDraft] = useState(task.note ?? '');
-  const [tab, setTab] = useState<'edit' | 'preview'>('edit');
+  const [tab, setTab] = useState<'edit' | 'preview'>(task.note ? 'preview' : 'edit');
+  const [saveState, setSaveState] = useState<'idle' | 'pending' | 'saved'>('idle');
+
+  const draftRef = useRef(draft);
+  const taskIdRef = useRef(task.id);
+  const noteRef = useRef(task.note ?? '');
+  const onSaveRef = useRef(onSave);
+
+  draftRef.current = draft;
+  noteRef.current = task.note ?? '';
+  onSaveRef.current = onSave;
 
   useEffect(() => {
+    if (taskIdRef.current === task.id) return;
+    taskIdRef.current = task.id;
     setDraft(task.note ?? '');
     setTab(task.note ? 'preview' : 'edit');
+    setSaveState('idle');
   }, [task.id, task.note]);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+    if (draft.trim() === (task.note ?? '').trim()) return;
+    setSaveState('pending');
+    const timer = window.setTimeout(() => {
+      onSaveRef.current(task.id, draft);
+      setSaveState('saved');
+    }, AUTOSAVE_MS);
+    return () => window.clearTimeout(timer);
+  }, [draft, task.id, task.note]);
 
-  const dirty = draft !== (task.note ?? '');
-
-  const save = () => {
-    onSave(task.id, draft.trim());
+  const flushAndClose = () => {
+    const current = draftRef.current;
+    if (current.trim() !== noteRef.current.trim()) {
+      onSaveRef.current(task.id, current);
+    }
     onClose();
   };
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') flushAndClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- close over latest flush via refs
+  }, [onClose, task.id]);
+
+  const statusLabel =
+    saveState === 'pending' ? '保存中…' : saveState === 'saved' ? '已自动保存' : '自动保存';
+
   return (
-    <div className="modal-backdrop memo-backdrop" onClick={onClose}>
+    <div className="modal-backdrop memo-backdrop" onClick={flushAndClose}>
       <div
         className="modal memo-modal"
         role="dialog"
@@ -50,7 +80,7 @@ export function MemoModal({ task, onSave, onClose }: Props) {
             </div>
             <div className="memo-modal-task">{task.title}</div>
           </div>
-          <button type="button" className="ghost" onClick={onClose}>
+          <button type="button" className="ghost" onClick={flushAndClose}>
             关闭
           </button>
         </div>
@@ -97,14 +127,9 @@ export function MemoModal({ task, onSave, onClose }: Props) {
 
         <div className="memo-modal-foot">
           <span className="memo-hint">支持标题、列表、代码块、链接</span>
-          <div className="memo-foot-actions">
-            <button type="button" className="ghost" onClick={onClose}>
-              取消
-            </button>
-            <button type="button" className="primary" disabled={!dirty} onClick={save}>
-              保存
-            </button>
-          </div>
+          <span className={`memo-save-status memo-save-${saveState}`} aria-live="polite">
+            {statusLabel}
+          </span>
         </div>
       </div>
     </div>

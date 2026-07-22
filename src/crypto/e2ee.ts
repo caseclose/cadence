@@ -151,7 +151,7 @@ export async function wrapDekWithPublicKey(dek: CryptoKey, publicKey: CryptoKey)
 export async function unwrapDekWithPrivateKey(wrappedB64: string, privateKey: CryptoKey): Promise<CryptoKey> {
   const wrapped = b64Decode(wrappedB64);
   const raw = await crypto.subtle.decrypt({ name: 'RSA-OAEP' }, privateKey, ab(wrapped));
-  return crypto.subtle.importKey('raw', raw, { name: 'AES-GCM', length: 256 }, false, [
+  return crypto.subtle.importKey('raw', raw, { name: 'AES-GCM', length: 256 }, true, [
     'encrypt',
     'decrypt',
   ]);
