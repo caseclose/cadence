@@ -44,14 +44,14 @@ export function TaskForm({ onAdd, disabled }: Props) {
       {disabled && <p className="form-login-hint">{t('loginFirst')}</p>}
       <input
         className="field-full"
-        placeholder="{t('taskName')}"
+        placeholder={t('taskName')}
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         disabled={disabled}
       />
       <input
         className="field-full"
-        placeholder="{t('when')}"
+        placeholder={t('when')}
         value={when}
         onChange={(e) => setWhen(e.target.value)}
         disabled={disabled}
@@ -61,7 +61,7 @@ export function TaskForm({ onAdd, disabled }: Props) {
           className="field-strategy"
           value={strategy}
           onChange={(e) => setStrategy(e.target.value as Strategy)}
-          aria-label="退避策略"
+          aria-label={locale === 'en' ? 'Backoff strategy' : '退避策略'}
           disabled={disabled}
         >
           <option value="converging">{t('converging')}</option>
@@ -74,7 +74,7 @@ export function TaskForm({ onAdd, disabled }: Props) {
       <textarea
         className="field-full subtle note-field"
         rows={3}
-        placeholder="{t('memoPlaceholder')}"
+        placeholder={t('memoPlaceholder')}
         value={note}
         onChange={(e) => setNote(e.target.value)}
         disabled={disabled}

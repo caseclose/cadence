@@ -9,7 +9,7 @@ import {
 } from '../notify/push';
 
 export function AuthBar() {
-  useLocale();
+  const locale = useLocale();
   const {
     user,
     cloudEnabled,
@@ -36,7 +36,7 @@ export function AuthBar() {
   }, [user]);
 
   if (!cloudEnabled) {
-    return <span className="auth-chip auth-chip-muted">本地模式</span>;
+    return <span className="auth-chip auth-chip-muted">{t('localMode')}</span>;
   }
 
   if (user) {
@@ -79,25 +79,21 @@ export function AuthBar() {
             type="button"
             className="btn-sm btn-ghost"
             disabled={pushBusy}
-            title={
-              pushOn
-                ? '关闭本设备的后台推送'
-                : '开启后台推送（关页/锁屏也可提醒）。大陆 Chrome 可能需 VPN；国内更推荐「提醒通道」。iOS 需先添加到主屏幕'
-            }
+            title={pushOn ? (locale === 'en' ? 'Disable background push on this device' : '关闭本设备的后台推送') : (locale === 'en' ? 'Works when the page is closed or locked' : '开启后台推送（关页/锁屏也可提醒）。大陆 Chrome 可能需 VPN；国内更推荐「提醒通道」')}
             onClick={() => void togglePush()}
           >
             {pushBusy ? '…' : pushOn ? t('pushEnabled') : t('enablePush')}
           </button>
         )}
         <button type="button" className="btn-sm btn-ghost" onClick={() => void signOut()}>
-          退出
+          {t('signOut')}
         </button>
         {pushMsg && (
           <p
             className="auth-msg auth-msg-inline auth-msg-dismiss"
             role="button"
             tabIndex={0}
-            title="点击关闭"
+            title={locale === 'en' ? 'Click to dismiss' : '点击关闭'}
             onClick={() => setPushMsg(null)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
@@ -134,7 +130,7 @@ export function AuthBar() {
       >
         <input
           className="auth-field"
-          placeholder="用户名（支持中文）"
+          placeholder={t('username')}
           type="text"
           autoComplete="username"
           value={username}
@@ -143,7 +139,7 @@ export function AuthBar() {
         <span className="auth-divider" aria-hidden />
         <input
           className="auth-field"
-          placeholder="密码 ≥6 位"
+          placeholder={t('password')}
           type="password"
           autoComplete="current-password"
           value={password}
@@ -151,7 +147,7 @@ export function AuthBar() {
         />
         <div className="auth-actions">
           <button type="submit" className="btn-sm btn-primary" disabled={!canSubmit}>
-            登录
+            {t('signIn')}
           </button>
           <button
             type="button"
@@ -159,7 +155,7 @@ export function AuthBar() {
             disabled={!canSubmit}
             onClick={() => void run(signUpWithUsername)}
           >
-            注册
+            {t('signUp')}
           </button>
         </div>
       </form>

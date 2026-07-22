@@ -1908,3 +1908,51 @@ button.link:hover:not(:disabled) {
     grid-template-columns: 1fr;
   }
 }
+
+/* ── Language switch ─────────────────────────────────────────── */
+.language-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  min-height: 40px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--panel) 86%, transparent);
+  box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.08));
+}
+
+.language-toggle button {
+  min-width: 34px;
+  height: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s, transform 0.18s;
+}
+
+.language-toggle button:hover {
+  color: var(--text);
+}
+
+.language-toggle button.is-active {
+  background: var(--accent);
+  color: var(--accent-text);
+  box-shadow: 0 3px 10px var(--accent-soft);
+}
+
+.language-toggle button:active {
+  transform: scale(0.96);
+}
+
+.language-toggle > span {
+  color: var(--border-strong, var(--border));
+  font-size: 11px;
+  user-select: none;
+}
