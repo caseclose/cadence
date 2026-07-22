@@ -369,7 +369,8 @@ body {
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--panel);
-  overflow: hidden;
+  /* visible so TermTip tooltips aren't clipped at the card edge */
+  overflow: visible;
 }
 
 .webhook-summary {
@@ -382,6 +383,12 @@ body {
   font-size: 14px;
   font-weight: 600;
   list-style: none;
+  border-radius: 14px;
+  overflow: visible;
+}
+
+.webhook-card[open] .webhook-summary {
+  border-radius: 14px 14px 0 0;
 }
 
 .webhook-summary::-webkit-details-marker {
@@ -568,7 +575,8 @@ section {
 
 .intro-card {
   padding: 0;
-  overflow: hidden;
+  /* panel-inner keeps overflow:hidden for the open animation; card stays visible for tips */
+  overflow: visible;
   background: color-mix(in srgb, var(--panel) 88%, var(--accent-soft));
   border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border));
   border-radius: 12px;
@@ -598,7 +606,13 @@ section {
   cursor: pointer;
   list-style: none;
   user-select: none;
+  border-radius: 12px;
+  overflow: visible;
   transition: background 0.15s ease;
+}
+
+.intro-card[open] .intro-summary {
+  border-radius: 12px 12px 0 0;
 }
 
 .intro-summary::-webkit-details-marker {
@@ -2156,6 +2170,7 @@ button.link:hover:not(:disabled) {
 .term-tip:focus-visible,
 .stat-term:hover,
 .stat-term:focus-visible {
+  z-index: 40;
   color: var(--accent);
   border-bottom-color: color-mix(in srgb, var(--accent) 55%, transparent);
 }
@@ -2164,13 +2179,15 @@ button.link:hover:not(:disabled) {
   border-radius: 2px;
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent);
 }
+/* Default below the trigger — avoids clipping by card/details top edges */
 .term-tip::after,
 .stat-term::after {
   content: attr(data-tooltip);
   position: absolute;
   left: 0;
-  bottom: calc(100% + 8px);
-  z-index: 5;
+  top: calc(100% + 8px);
+  bottom: auto;
+  z-index: 50;
   width: max-content;
   max-width: min(240px, 70vw);
   padding: 8px 10px;
@@ -2187,7 +2204,7 @@ button.link:hover:not(:disabled) {
   box-shadow: 0 10px 24px color-mix(in srgb, #000 28%, transparent);
   opacity: 0;
   pointer-events: none;
-  transform: translateY(4px);
+  transform: translateY(-4px);
   transition: opacity 0.12s ease, transform 0.12s ease;
 }
 .term-tip:hover::after,
@@ -2196,6 +2213,15 @@ button.link:hover:not(:disabled) {
 .stat-term:focus-visible::after {
   opacity: 1;
   transform: translateY(0);
+}
+/* Cards that clip children: briefly allow overflow while a tip is shown */
+.task:has(.term-tip:hover),
+.task:has(.term-tip:focus-visible),
+.form-card:has(.term-tip:hover),
+.form-card:has(.term-tip:focus-visible),
+.intro-card[open] .intro-panel-inner:has(.term-tip:hover),
+.intro-card[open] .intro-panel-inner:has(.term-tip:focus-visible) {
+  overflow: visible;
 }
 /* Badges / intro chips keep chrome; tip underline sits under the label */
 .badge.term-tip,
