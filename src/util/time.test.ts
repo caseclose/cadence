@@ -13,6 +13,17 @@ describe('parseDuration', () => {
     expect(parseDuration('1d12h')).toBe(DAY + 12 * HOUR);
     expect(parseDuration('45')).toBe(45 * MIN);
   });
+
+  it('parses Chinese units and halves', () => {
+    expect(parseDuration('10分钟')).toBe(10 * MIN);
+    expect(parseDuration('10分')).toBe(10 * MIN);
+    expect(parseDuration('1小时')).toBe(HOUR);
+    expect(parseDuration('1时')).toBe(HOUR);
+    expect(parseDuration('2天')).toBe(2 * DAY);
+    expect(parseDuration('半小时')).toBe(HOUR / 2);
+    expect(parseDuration('半天')).toBe(DAY / 2);
+    expect(parseDuration('1小时30分钟')).toBe(HOUR + 30 * MIN);
+  });
 });
 
 describe('parseClock cross-day', () => {

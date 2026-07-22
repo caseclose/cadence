@@ -29,7 +29,7 @@ export function TaskForm({ onAdd, disabled }: Props) {
 
   const hint = (() => {
     if (!when) return null;
-    if (!parsed) return '无法识别，试试 1h / 周五下午2点 / 7月22日上午10点';
+    if (!parsed) return '无法识别，试试 1h / 10分钟 / 周五下午2点 / 7月22日上午10点';
     if (parsed.kind === 'clock') {
       return `将在 ${formatFireAt(parsed.fireAt)} 提醒你（约 ${formatDuration(parsed.etaMs)} 后）`;
     }

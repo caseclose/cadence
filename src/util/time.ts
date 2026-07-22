@@ -61,26 +61,36 @@ export interface ParsedWhen {
   kind: 'duration' | 'clock';
 }
 
-/** Parse relative duration like "1h", "90m", "2d", "1d12h". */
+const DURATION_UNIT_MS: Record<string, number> = {
+  d: DAY,
+  天: DAY,
+  h: HOUR,
+  小时: HOUR,
+  时: HOUR,
+  m: MINUTE,
+  分钟: MINUTE,
+  分: MINUTE,
+  s: 1000,
+  秒: 1000,
+};
+
+/** Parse relative duration like "1h", "90m", "2d", "10分钟", "半小时". */
 export function parseDuration(input: string): number | null {
   const text = input.trim().toLowerCase();
   if (!text) return null;
-  const re = /(\d+(?:\.\d+)?)\s*(d|h|m|s)/g;
+
+  if (text === '半小时' || text === '半个小时') return HOUR / 2;
+  if (text === '半天') return DAY / 2;
+
+  // Longer Chinese units first so 小时/分钟 beat 时/分.
+  const re = /(\d+(?:\.\d+)?)\s*(天|小时|时|分钟|分|秒|d|h|m|s)/g;
   let total = 0;
   let matched = false;
   let match: RegExpExecArray | null;
   while ((match = re.exec(text))) {
     matched = true;
     const value = parseFloat(match[1]);
-    const unit = match[2];
-    total +=
-      unit === 'd'
-        ? value * DAY
-        : unit === 'h'
-          ? value * HOUR
-          : unit === 'm'
-            ? value * MINUTE
-            : value * 1000;
+    total += value * DURATION_UNIT_MS[match[2]];
   }
   if (!matched) {
     const n = parseFloat(text);

@@ -24,7 +24,8 @@ export function WhenFormatGuide() {
               <h4>相对时长</h4>
               <ul>
                 <li><code>1h</code> · <code>90m</code> · <code>2d</code></li>
-                <li><code>45</code>（纯数字 = 分钟）</li>
+                <li><code>10分钟</code> · <code>1小时</code> · <code>2天</code></li>
+                <li><code>半小时</code> · <code>45</code>（纯数字 = 分钟）</li>
               </ul>
             </section>
             <section>
