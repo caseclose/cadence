@@ -1,7 +1,7 @@
 import { Task } from '../scheduler/types';
 import { formatRelative, formatDuration } from '../util/time';
 import { noteSummary } from '../util/markdown';
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 
 interface Props {
   task: Task;
@@ -23,6 +23,8 @@ const stateLabel: Record<Task['state'], string> = {
 
 export function TaskCard({ task, now, onCheck, onDelete, onOpenMemo, onUpdateTitle, done }: Props) {
   const overdue = !done && task.nextFireAt <= now && task.state !== 'done';
+  const remainingRatio = Math.max(0, Math.min(1, (task.nextFireAt - now) / Math.max(task.etaMs, 1)));
+  const urgency = done ? 'done' : overdue ? 'overdue' : remainingRatio > 0.6 ? 'fresh' : remainingRatio > 0.25 ? 'near' : 'urgent';
   const locked = task.title === '[e2ee]';
   const summary = task.note?.trim() ? noteSummary(task.note) : '';
   const [editingTitle, setEditingTitle] = useState(false);
@@ -33,7 +35,10 @@ export function TaskCard({ task, now, onCheck, onDelete, onOpenMemo, onUpdateTit
     setEditingTitle(false);
   };
   return (
-    <div className={`card task ${overdue ? 'overdue' : ''} ${done ? 'done-card' : ''}`}>
+    <div
+      className={`card task task-urgency-${urgency} ${overdue ? 'overdue' : ''} ${done ? 'done-card' : ''}`}
+      style={{ '--task-progress': `${Math.round((1 - remainingRatio) * 100)}%` } as CSSProperties}
+    >
       <div className="task-main">
         {editingTitle ? (
           <input

@@ -1207,6 +1207,16 @@ button.link:hover:not(:disabled) {
   gap: 16px;
   position: relative;
   overflow: hidden;
+  border-color: color-mix(in srgb, var(--task-color, var(--border)) 24%, var(--border));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--task-color, var(--panel)) 7%, var(--panel)) 0%, var(--panel) 52%, color-mix(in srgb, var(--task-color, var(--panel)) 4%, var(--panel)) 100%);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--task-color, transparent) 8%, transparent);
+  transition: transform 0.2s ease, border-color 0.3s, box-shadow 0.3s, background 0.3s;
+}
+
+.task:not(.done-card):hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--task-color, var(--accent)) 48%, var(--border));
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--task-color, transparent) 15%, transparent);
 }
 
 .task::before {
@@ -1215,11 +1225,41 @@ button.link:hover:not(:disabled) {
   left: 0;
   top: 0;
   bottom: 0;
-  width: 3px;
-  background: var(--border);
+  width: 4px;
+  background: var(--task-color, var(--border));
   border-radius: 3px 0 0 3px;
-  transition: background 0.2s;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--task-color, var(--border)) 55%, transparent);
+  transition: background 0.35s, box-shadow 0.35s;
 }
+
+.task::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 0;
+  bottom: 0;
+  width: var(--task-progress, 0%);
+  max-width: 100%;
+  pointer-events: none;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--task-color) 10%, transparent), transparent);
+  opacity: 0.8;
+  transition: width 0.8s ease, background 0.35s;
+}
+
+.task.overdue {
+  animation: urgency-pulse 2.8s ease-in-out infinite;
+}
+
+@keyframes urgency-pulse {
+  0%, 100% { box-shadow: 0 8px 24px color-mix(in srgb, var(--task-color) 9%, transparent); }
+  50% { box-shadow: 0 10px 34px color-mix(in srgb, var(--task-color) 24%, transparent); }
+}
+
+.task-urgency-fresh { --task-color: #18a889; }
+.task-urgency-near { --task-color: #3f8fd8; }
+.task-urgency-urgent { --task-color: #e5a23c; }
+.task-urgency-overdue { --task-color: var(--warn); }
+.task-urgency-done { --task-color: var(--muted); }
 
 .task.overdue::before {
   background: var(--warn);
@@ -1262,7 +1302,14 @@ button.link:hover:not(:disabled) {
 }
 
 .task-title-button:hover:not(:disabled) {
-  color: var(--accent);
+  color: var(--task-color, var(--accent));
+}
+
+.task-title-button:focus-visible,
+.task-note-summary:focus-visible {
+  outline: 2px solid var(--task-color, var(--accent));
+  outline-offset: 3px;
+  border-radius: 4px;
 }
 
 .task-title-button:disabled {
@@ -1304,8 +1351,21 @@ button.link:hover:not(:disabled) {
   text-overflow: ellipsis;
 }
 
+.task-note-summary {
+  position: relative;
+  padding-left: 12px;
+}
+
+.task-note-summary::before {
+  content: '✦';
+  position: absolute;
+  left: 0;
+  color: var(--task-color, var(--accent));
+  font-size: 10px;
+}
+
 .task-note-summary:hover {
-  color: var(--accent);
+  color: var(--task-color, var(--accent));
 }
 
 .task-meta {
