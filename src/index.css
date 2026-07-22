@@ -1214,6 +1214,12 @@ button.link:hover:not(:disabled) {
   letter-spacing: -0.01em;
 }
 
+.task-title-locked {
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--muted, #8a8f98);
+}
+
 .task-note {
   color: var(--muted);
   font-size: 13px;

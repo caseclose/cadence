@@ -19,10 +19,13 @@ const stateLabel: Record<Task['state'], string> = {
 
 export function TaskCard({ task, now, onCheck, onDelete, done }: Props) {
   const overdue = !done && task.nextFireAt <= now && task.state !== 'done';
+  const locked = task.title === '[e2ee]';
   return (
     <div className={`card task ${overdue ? 'overdue' : ''} ${done ? 'done-card' : ''}`}>
       <div className="task-main">
-        <div className="task-title">{task.title}</div>
+        <div className={`task-title ${locked ? 'task-title-locked' : ''}`}>
+          {locked ? '🔒 任务已加密，输入密码进行本地解密' : task.title}
+        </div>
         {task.note && <div className="task-note">{task.note}</div>}
         <div className="task-meta">
           <span className={`badge s-${task.state}`}>{stateLabel[task.state]}</span>
