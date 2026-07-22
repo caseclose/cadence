@@ -64,9 +64,8 @@ describe('keyring session', () => {
 
     const key = `cadence:e2ee-session:${uid}`;
     const blob = JSON.parse(localStorage.getItem(key)!) as {
-      v: 1;
+      v: number;
       expiresAt: number;
-      dekJwk: JsonWebKey;
     };
     blob.expiresAt = Date.now() - 1;
     localStorage.setItem(key, JSON.stringify(blob));
@@ -75,6 +74,51 @@ describe('keyring session', () => {
     const ok = await tryRestoreKeyringSession(uid);
     expect(ok).toBe(false);
     expect(isKeyringUnlocked()).toBe(false);
+    expect(localStorage.getItem(key)).toBeNull();
+  });
+
+  it('rejects corrupt DEK that fails probe verification', async () => {
+    await setupKeyring('session-pass-789');
+    const uid = 'user-session-3';
+    await persistKeyringSession(uid);
+
+    const key = `cadence:e2ee-session:${uid}`;
+    const blob = JSON.parse(localStorage.getItem(key)!) as {
+      v: number;
+      expiresAt: number;
+      dekJwk: JsonWebKey;
+      probeIv: string;
+      probeCt: string;
+    };
+    // Swap in a different AES key while keeping the old probe.
+    const other = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, [
+      'encrypt',
+      'decrypt',
+    ]);
+    blob.dekJwk = await crypto.subtle.exportKey('jwk', other);
+    localStorage.setItem(key, JSON.stringify(blob));
+
+    lockKeyring();
+    const ok = await tryRestoreKeyringSession(uid);
+    expect(ok).toBe(false);
+    expect(isKeyringUnlocked()).toBe(false);
+    expect(localStorage.getItem(key)).toBeNull();
+  });
+
+  it('rejects legacy v1 sessions without probe', async () => {
+    await setupKeyring('session-pass-legacy');
+    const uid = 'user-session-legacy';
+    await persistKeyringSession(uid);
+    const key = `cadence:e2ee-session:${uid}`;
+    const blob = JSON.parse(localStorage.getItem(key)!) as Record<string, unknown>;
+    blob.v = 1;
+    delete blob.probeIv;
+    delete blob.probeCt;
+    localStorage.setItem(key, JSON.stringify(blob));
+
+    lockKeyring();
+    const ok = await tryRestoreKeyringSession(uid);
+    expect(ok).toBe(false);
     expect(localStorage.getItem(key)).toBeNull();
   });
 

@@ -1,10 +1,38 @@
 # Cadence
 
+<p align="center"><strong>把 CPU 调度搬到人的多任务管理上</strong></p>
+
+<p align="center">自适应退避提醒 · 端到端加密 · 开源自用</p>
+
+<p align="center">
+  <a href="https://github.com/caseclose">
+    <img src="https://img.shields.io/badge/设计_&_开发-Feng_Wang-181717?style=for-the-badge&logo=github&logoColor=white" alt="设计 & 开发" />
+  </a>
+  <a href="mailto:fengw2002@gmail.com">
+    <img src="https://img.shields.io/badge/Gmail-fengw2002%40gmail.com-EA4335?style=for-the-badge&logo=gmail&logoColor=white" alt="Gmail" />
+  </a>
+  <a href="mailto:fengwang@stu.pku.edu.cn">
+    <img src="https://img.shields.io/badge/北大邮箱-fengwang%40stu.pku.edu.cn-8B0000?style=for-the-badge&logo=telegram&logoColor=white" alt="北大邮箱" />
+  </a>
+</p>
+
+<p align="center">挂起任务 · Markdown 备忘录 · Web Push / 飞书企微钉钉</p>
+
+<p align="center">
+  <a href="https://caseclose.github.io/cadence/">
+    <img src="https://img.shields.io/badge/Demo-caseclose.github.io-0E8A5F?logo=githubpages&logoColor=white" alt="Online demo" />
+  </a>
+  <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT" />
+  <img src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black" alt="React" />
+  <img src="https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white" alt="Vite" />
+  <img src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
+</p>
+
+---
+
 把 CPU 的「上下文切换 + 自适应退避轮询」搬到人的多任务管理上。
 
 单核 CPU 在等待某个任务（I/O、计时器）时会把它挂起（`yield()`），去做别的事，并周期性回来检查它是否就绪。人也一样：你启动了一次模型训练、或把某件事交给了某个人/agent，需要过一阵才有结果。Cadence 让你把这件事「挂起」，然后按一个自适应的回访节奏（cadence）回来提醒你确认，而不是一直占着你的注意力。
-
-**在线演示：[caseclose.github.io/cadence](https://caseclose.github.io/cadence/)**
 
 ## 核心机制：自适应退避
 

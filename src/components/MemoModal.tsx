@@ -8,10 +8,12 @@ interface Props {
   onClose: () => void;
 }
 
-const AUTOSAVE_MS = 400;
+/** Longer debounce cuts encrypted upsert chatter while typing. */
+const AUTOSAVE_MS = 1200;
 
 /**
  * Wide centered memo modal with debounced autosave.
+ * Flushes on close, task switch, and unmount so drafts are not lost.
  */
 export function MemoModal({ task, onSave, onClose }: Props) {
   const [draft, setDraft] = useState(task.note ?? '');
@@ -20,47 +22,65 @@ export function MemoModal({ task, onSave, onClose }: Props) {
 
   const draftRef = useRef(draft);
   const taskIdRef = useRef(task.id);
-  const noteRef = useRef(task.note ?? '');
+  const lastSavedRef = useRef((task.note ?? '').trim());
   const onSaveRef = useRef(onSave);
 
   draftRef.current = draft;
-  noteRef.current = task.note ?? '';
   onSaveRef.current = onSave;
+
+  const flushDraft = () => {
+    const current = draftRef.current;
+    if (current.trim() === lastSavedRef.current) return;
+    onSaveRef.current(taskIdRef.current, current);
+    lastSavedRef.current = current.trim();
+    setSaveState('saved');
+  };
+
+  useEffect(() => {
+    return () => {
+      flushDraft();
+    };
+  }, []);
 
   useEffect(() => {
     if (taskIdRef.current === task.id) return;
+    flushDraft();
     taskIdRef.current = task.id;
+    lastSavedRef.current = (task.note ?? '').trim();
     setDraft(task.note ?? '');
     setTab(task.note ? 'preview' : 'edit');
     setSaveState('idle');
   }, [task.id, task.note]);
 
   useEffect(() => {
-    if (draft.trim() === (task.note ?? '').trim()) return;
+    if (draft.trim() === lastSavedRef.current) return;
     setSaveState('pending');
     const timer = window.setTimeout(() => {
       onSaveRef.current(task.id, draft);
+      lastSavedRef.current = draft.trim();
       setSaveState('saved');
     }, AUTOSAVE_MS);
     return () => window.clearTimeout(timer);
-  }, [draft, task.id, task.note]);
+  }, [draft, task.id]);
 
   const flushAndClose = () => {
-    const current = draftRef.current;
-    if (current.trim() !== noteRef.current.trim()) {
-      onSaveRef.current(task.id, current);
-    }
+    flushDraft();
     onClose();
   };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') flushAndClose();
+      if (e.key !== 'Escape') return;
+      const current = draftRef.current;
+      if (current.trim() !== lastSavedRef.current) {
+        onSaveRef.current(taskIdRef.current, current);
+        lastSavedRef.current = current.trim();
+      }
+      onClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- close over latest flush via refs
-  }, [onClose, task.id]);
+  }, [onClose]);
 
   const statusLabel =
     saveState === 'pending' ? '保存中…' : saveState === 'saved' ? '已自动保存' : '自动保存';
@@ -126,7 +146,7 @@ export function MemoModal({ task, onSave, onClose }: Props) {
         </div>
 
         <div className="memo-modal-foot">
-          <span className="memo-hint">支持标题、列表、代码块、链接</span>
+          <span className="memo-hint">支持标题、列表、代码块、链接 · 自动保存</span>
           <span className={`memo-save-status memo-save-${saveState}`} aria-live="polite">
             {statusLabel}
           </span>

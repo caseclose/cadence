@@ -141,6 +141,8 @@ async function deleteRemote(id: string) {
 let authListenerBound = false;
 let realtimeChannel: RealtimeChannel | null = null;
 let realtimeUid: string | null = null;
+/** When set, auth listener waits so it does not race password unlock. */
+let e2eeUnlockInFlight: Promise<string | null> | null = null;
 
 function mergeTasks(local: Task[], remote: Task[]): Task[] {
   const byId = new Map<string, Task>();
@@ -241,21 +243,30 @@ async function syncRemoteTasks(
 
 async function ensureE2EEWithPassword(user: User, username: string, password: string): Promise<string | null> {
   if (!supabase) return '未配置云同步';
-  try {
-    if (userHasE2EE(user)) {
-      await unlockKeyring(user, password);
-    } else {
-      const e2eeMeta = await setupKeyring(password);
-      const { error } = await supabase.auth.updateUser({
-        data: { username: username.trim(), ...e2eeMeta },
-      });
-      if (error) return mapAuthError(error.message);
+
+  const work = (async (): Promise<string | null> => {
+    try {
+      if (userHasE2EE(user)) {
+        await unlockKeyring(user, password);
+      } else {
+        const e2eeMeta = await setupKeyring(password);
+        const { error } = await supabase!.auth.updateUser({
+          data: { username: username.trim(), ...e2eeMeta },
+        });
+        if (error) return mapAuthError(error.message);
+      }
+      await persistKeyringSession(user.id);
+      return null;
+    } catch {
+      return '密码错误，无法解锁端到端加密';
     }
-    await persistKeyringSession(user.id);
-    return null;
-  } catch {
-    return '密码错误，无法解锁端到端加密';
-  }
+  })();
+
+  e2eeUnlockInFlight = work;
+  void work.finally(() => {
+    if (e2eeUnlockInFlight === work) e2eeUnlockInFlight = null;
+  });
+  return work;
 }
 
 function clearSessionTasks(set: (partial: Partial<StoreState>) => void, userId?: string | null) {
@@ -314,6 +325,8 @@ export const useStore = create<StoreState>((set, get) => ({
               set({ user: null });
               return;
             }
+            // Wait for in-flight password unlock so we don't briefly lock + sync mid-login.
+            if (e2eeUnlockInFlight) await e2eeUnlockInFlight;
             const flags = await restoreE2EEFlags(s.user);
             set({ user: s.user, ...flags });
             try {
