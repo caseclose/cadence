@@ -72,14 +72,22 @@ export interface ParsedWhen {
 
 const DURATION_UNIT_MS: Record<string, number> = {
   d: DAY,
+  day: DAY,
+  days: DAY,
   天: DAY,
   h: HOUR,
+  hour: HOUR,
+  hours: HOUR,
   小时: HOUR,
   时: HOUR,
   m: MINUTE,
+  minute: MINUTE,
+  minutes: MINUTE,
   分钟: MINUTE,
   分: MINUTE,
   s: 1000,
+  second: 1000,
+  seconds: 1000,
   秒: 1000,
 };
 
@@ -91,8 +99,8 @@ export function parseDuration(input: string): number | null {
   if (text === '半小时' || text === '半个小时') return HOUR / 2;
   if (text === '半天') return DAY / 2;
 
-  // Longer Chinese units first so 小时/分钟 beat 时/分.
-  const re = /(\d+(?:\.\d+)?)\s*(天|小时|时|分钟|分|秒|d|h|m|s)/g;
+  // Match longer words first so plural English and Chinese units are not truncated.
+  const re = /(\d+(?:\.\d+)?)\s*(minutes|minute|seconds|second|hours|hour|days|day|天|小时|时|分钟|分|秒|d|h|m|s)/g;
   let total = 0;
   let matched = false;
   let match: RegExpExecArray | null;
@@ -317,6 +325,9 @@ function parseClockBody(text: string, now: number, dayOffset: number): number | 
 }
 
 const DAY_PREFIX: Record<string, number> = {
+  today: 0,
+  tomorrow: 1,
+  dayaftertomorrow: 2,
   今天: 0,
   明天: 1,
   后天: 2,
@@ -342,23 +353,33 @@ interface WeekdayParts {
 
 /** 周五下午2点 / 下周五14:00 / 这周五上午10点 */
 function parseWeekdayPrefix(text: string): WeekdayParts | null {
-  let extraWeeks = 0;
-  let t = text;
-
-  if (t.startsWith('下')) {
-    extraWeeks = 1;
-    t = t.slice(1);
-  } else if (t.startsWith('这') || t.startsWith('本')) {
-    t = t.replace(/^这(?:周|星期)?/, '周').replace(/^本(?:周|星期)?/, '周');
+  const english = text.match(/^(?:(next|this))?(sunday|monday|tuesday|wednesday|thursday|friday|saturday)(.*)$/);
+  if (english) {
+    const names = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    return {
+      dow: names.indexOf(english[2]),
+      rest: english[3],
+      extraWeeks: english[1] === 'next' ? 1 : 0,
+    };
   }
 
-  const m = t.match(/^(?:周|星期)([日天一二三四五六])(.*)$/);
-  if (!m) return null;
+  let extraWeeks = 0;
+  let value = text;
 
-  const dow = WEEKDAY_MAP[m[1]];
+  if (value.startsWith('下')) {
+    extraWeeks = 1;
+    value = value.slice(1);
+  } else if (value.startsWith('这') || value.startsWith('本')) {
+    value = value.replace(/^这(?:周|星期)?/, '周').replace(/^本(?:周|星期)?/, '周');
+  }
+
+  const match = value.match(/^(?:周|星期)([日天一二三四五六])(.*)$/);
+  if (!match) return null;
+
+  const dow = WEEKDAY_MAP[match[1]];
   if (dow === undefined) return null;
 
-  return { dow, rest: m[2], extraWeeks };
+  return { dow, rest: match[2], extraWeeks };
 }
 
 function computeWeekdayFireAt(
@@ -396,7 +417,7 @@ function parseWeekdayDateTime(text: string, now: number): number | null {
  * Supports 14:00, 明天下午3点, 7月22日上午10点, 周五下午2点, etc.
  */
 export function parseClock(input: string, now = Date.now()): number | null {
-  const text = input.trim().replace(/\s+/g, '');
+  const text = input.trim().toLowerCase().replace(/\s+/g, '');
 
   const dated = parseCalendarDatePrefix(text, now);
   if (dated) return parseAbsoluteDateTime(dated, now);

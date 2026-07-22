@@ -92,6 +92,7 @@ export function schedule(
       return {
         ...base,
         state: 'waiting',
+        attempts: 0,
         completedAt: undefined,
         nextFireAt: now + task.etaMs,
       };

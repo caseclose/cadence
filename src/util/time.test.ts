@@ -14,6 +14,12 @@ describe('parseDuration', () => {
     expect(parseDuration('45')).toBe(45 * MIN);
   });
 
+  it('parses English unit words', () => {
+    expect(parseDuration('10 minutes')).toBe(10 * MIN);
+    expect(parseDuration('1 hour 30 minutes')).toBe(HOUR + 30 * MIN);
+    expect(parseDuration('2 days')).toBe(2 * DAY);
+  });
+
   it('parses Chinese units and halves', () => {
     expect(parseDuration('10分钟')).toBe(10 * MIN);
     expect(parseDuration('10分')).toBe(10 * MIN);
@@ -40,6 +46,11 @@ describe('parseClock cross-day', () => {
 
   it('parses 明天 alone as 09:00', () => {
     expect(parseClock('明天', now)).toBe(new Date(2026, 6, 22, 9, 0).getTime());
+  });
+
+  it('parses English relative dates', () => {
+    expect(parseClock('tomorrow 14:00', now)).toBe(new Date(2026, 6, 22, 14, 0).getTime());
+    expect(parseClock('day after tomorrow 3 PM', now)).toBe(new Date(2026, 6, 23, 15, 0).getTime());
   });
 });
 
@@ -88,6 +99,11 @@ describe('parseClock weekday', () => {
 
   it('parses 星期五14:00', () => {
     expect(parseClock('星期五14:00', now)).toBe(new Date(2026, 6, 24, 14, 0).getTime());
+  });
+
+  it('parses English weekdays', () => {
+    expect(parseClock('Friday 2 PM', now)).toBe(new Date(2026, 6, 24, 14, 0).getTime());
+    expect(parseClock('next Friday 14:00', now)).toBe(new Date(2026, 6, 31, 14, 0).getTime());
   });
 });
 

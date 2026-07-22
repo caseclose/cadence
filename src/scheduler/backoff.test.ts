@@ -127,11 +127,14 @@ describe('reestimate and done', () => {
       { id: 'a', title: 'train', strategy: 'converging', etaMs: MIN, note: 'ctx' },
       now,
     );
-    t = schedule(t, { type: 'done' }, now + MIN, DEFAULT_BACKOFF, noJitter);
-    t = schedule(t, { type: 'reopen' }, now + 2 * MIN, DEFAULT_BACKOFF, noJitter);
+    t = schedule(t, { type: 'checked_not_done' }, now + MIN, DEFAULT_BACKOFF, noJitter);
+    expect(t.attempts).toBe(1);
+    t = schedule(t, { type: 'done' }, now + 2 * MIN, DEFAULT_BACKOFF, noJitter);
+    t = schedule(t, { type: 'reopen' }, now + 3 * MIN, DEFAULT_BACKOFF, noJitter);
     expect(t.state).toBe('waiting');
+    expect(t.attempts).toBe(0);
     expect(t.completedAt).toBeUndefined();
-    expect(t.nextFireAt).toBe(now + 2 * MIN + MIN);
+    expect(t.nextFireAt).toBe(now + 3 * MIN + MIN);
     expect(t.note).toBe('ctx');
   });
 });
