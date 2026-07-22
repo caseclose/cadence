@@ -31,7 +31,8 @@ export interface Task {
 export type Action =
   | { type: 'checked_not_done' } // looked, still running -> back off
   | { type: 'no_resources' } // too busy to look -> short snooze
-  | { type: 'snooze'; durationMs: number } // explicit manual snooze
+  | { type: 'snooze'; durationMs: number } // relative: add to max(now, nextFireAt)
+  | { type: 'snooze'; fireAt: number } // absolute target moment (e.g. tomorrow 09:00)
   | { type: 'reestimate'; etaMs: number } // give a fresh ETA -> back to waiting
   | { type: 'reopen' } // undo completion -> back to waiting
   | { type: 'done' }; // finished -> dequeue

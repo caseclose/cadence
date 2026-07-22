@@ -141,9 +141,9 @@ describe('reestimate and done', () => {
 
 
 describe('explicit snooze', () => {
-  it('uses now + duration without jitter or consuming attempts', () => {
+  it('when already due, uses now + duration without jitter or consuming attempts', () => {
     const task = createTask({ id: 's', title: 'wait', strategy: 'converging', etaMs: 60 * MIN }, 0);
-    const now = 1_700_000_000_000;
+    const now = 1_700_000_000_000; // well past task.nextFireAt
     const tenMin = schedule(task, { type: 'snooze', durationMs: 10 * MIN }, now, DEFAULT_BACKOFF, () => 0);
     expect(tenMin.nextFireAt).toBe(now + 10 * MIN);
     expect(tenMin.state).toBe('snoozed');
@@ -154,28 +154,73 @@ describe('explicit snooze', () => {
     expect(oneHour.nextFireAt).toBe(now + 60 * MIN);
   });
 
-  it('floors an explicit snooze to minIntervalMs only', () => {
-    const task = createTask({ id: 's', title: 'wait', strategy: 'converging', etaMs: 60 * MIN }, 0);
-    const snoozed = schedule(task, { type: 'snooze', durationMs: 1 }, 0);
-    expect(snoozed.nextFireAt).toBe(DEFAULT_BACKOFF.minIntervalMs);
-  });
-
-  it('does not cap an explicit snooze at maxIntervalMs (e.g. tomorrow morning)', () => {
-    const task = createTask({ id: 's', title: 'wait', strategy: 'converging', etaMs: 60 * MIN }, 0);
-    // 22:00 -> tomorrow 09:00 is 11h, well above the default 4h backoff ceiling.
-    const now = Date.UTC(2026, 6, 22, 14, 0, 0); // 22:00 CST
-    const tomorrow9 = Date.UTC(2026, 6, 23, 1, 0, 0); // 09:00 CST next day
-    const duration = tomorrow9 - now;
-    expect(duration).toBeGreaterThan(DEFAULT_BACKOFF.maxIntervalMs);
+  it('when not yet due, adds duration onto nextFireAt instead of resetting to now', () => {
+    const createdAt = 1_000_000;
+    const task = createTask(
+      { id: 's', title: 'wait', strategy: 'converging', etaMs: 2 * 60 * MIN },
+      createdAt,
+    );
+    // Open the modal early (e.g. "view now") while ~2h remain.
+    const now = createdAt + 5 * MIN;
+    expect(task.nextFireAt).toBeGreaterThan(now);
 
     const snoozed = schedule(
       task,
-      { type: 'snooze', durationMs: duration },
+      { type: 'snooze', durationMs: 10 * MIN },
       now,
       DEFAULT_BACKOFF,
       noJitter,
     );
-    expect(snoozed.nextFireAt).toBe(now + duration);
+    expect(snoozed.nextFireAt).toBe(task.nextFireAt + 10 * MIN);
+    expect(snoozed.nextFireAt).not.toBe(now + 10 * MIN);
+    expect(snoozed.etaMs).toBe(2 * 60 * MIN);
+    expect(snoozed.attempts).toBe(0);
+  });
+
+  it('floors a relative snooze duration to minIntervalMs only', () => {
+    const task = createTask({ id: 's', title: 'wait', strategy: 'converging', etaMs: 60 * MIN }, 0);
+    // Already due: base is now, duration floors to minInterval.
+    const due = { ...task, nextFireAt: 0 };
+    const snoozed = schedule(due, { type: 'snooze', durationMs: 1 }, 0);
+    expect(snoozed.nextFireAt).toBe(DEFAULT_BACKOFF.minIntervalMs);
+  });
+
+  it('honors an absolute fireAt without stacking onto nextFireAt', () => {
+    const createdAt = Date.UTC(2026, 6, 22, 4, 0, 0); // 12:00 CST
+    const task = createTask(
+      { id: 's', title: 'wait', strategy: 'converging', etaMs: 2 * 60 * MIN },
+      createdAt,
+    );
+    const now = createdAt + 5 * MIN;
+    const tomorrow9 = Date.UTC(2026, 6, 23, 1, 0, 0); // 09:00 CST next day
+    expect(tomorrow9 - now).toBeGreaterThan(DEFAULT_BACKOFF.maxIntervalMs);
+
+    const snoozed = schedule(
+      task,
+      { type: 'snooze', fireAt: tomorrow9 },
+      now,
+      DEFAULT_BACKOFF,
+      noJitter,
+    );
+    // Absolute target — not max(now, nextFireAt) + (tomorrow9 - now).
     expect(snoozed.nextFireAt).toBe(tomorrow9);
+    expect(snoozed.etaMs).toBe(2 * 60 * MIN);
+  });
+
+  it('rolls a past absolute fireAt forward a day and floors at now+minInterval', () => {
+    const now = Date.UTC(2026, 6, 22, 2, 0, 0); // 10:00 CST
+    const past9 = Date.UTC(2026, 6, 22, 1, 0, 0); // 09:00 CST today (already past)
+    const task = createTask({ id: 's', title: 'wait', strategy: 'converging', etaMs: 60 * MIN }, 0);
+
+    const snoozed = schedule(
+      task,
+      { type: 'snooze', fireAt: past9 },
+      now,
+      DEFAULT_BACKOFF,
+      noJitter,
+    );
+    const nextDay9 = past9 + 24 * 60 * 60_000;
+    expect(snoozed.nextFireAt).toBe(Math.max(nextDay9, now + DEFAULT_BACKOFF.minIntervalMs));
+    expect(snoozed.nextFireAt).toBe(nextDay9);
   });
 });

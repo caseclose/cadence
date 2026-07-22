@@ -17,6 +17,7 @@ import { LanguageToggle } from './components/LanguageToggle';
 import { useLocale, t } from './i18n';
 import { summarizeTasks } from './util/stats';
 import { formatDuration } from './util/time';
+import { TermTip } from './components/TermTip';
 
 export default function App() {
   useLocale();
@@ -135,7 +136,7 @@ export default function App() {
               <LanguageToggle />
               <ThemeToggle />
               {notifPerm !== 'granted' && (
-                <button type="button" className="toolbar-btn" onClick={enableNotifications}>
+                <button type="button" className="toolbar-btn" title={t('enableWebHint')} onClick={enableNotifications}>
                   {t('enableWeb')}
                 </button>
               )}
@@ -154,8 +155,8 @@ export default function App() {
         <section className="queue-section">
           <div className="section-head">
             <div>
-              <span className="section-kicker">{t('queueKicker')}</span>
-              <h2>{t('queue')}</h2>
+              <span className="section-kicker"><TermTip hintKey="queueKickerHint">{t('queueKicker')}</TermTip></span>
+              <h2><TermTip hintKey="queueHint">{t('queue')}</TermTip></h2>
             </div>
             {canManageTasks && (
               <div className="tools">
@@ -211,39 +212,39 @@ export default function App() {
         <section className="stats-panel">
           <div className="section-head">
             <div>
-              <span className="section-kicker">{t('statsKicker')}</span>
+              <span className="section-kicker"><TermTip hintKey="statsKickerHint">{t('statsKicker')}</TermTip></span>
               <h2>{t('stats')}</h2>
             </div>
           </div>
           <div className="stat-grid">
             <div className="stat-card">
-              <span className="stat-term" tabIndex={0} aria-label={`${t('completed')}. ${t('completedHint')}`} data-tooltip={t('completedHint')}>{t('completed')}</span>
+              <TermTip hintKey="completedHint">{t('completed')}</TermTip>
               <strong>{stats.completed}</strong>
               <small>{t('stats30Days')}</small>
             </div>
             <div className="stat-card">
-              <span className="stat-term" tabIndex={0} aria-label={`${t('etaRatio')}. ${t('etaRatioHint')}`} data-tooltip={t('etaRatioHint')}>{t('etaRatio')}</span>
+              <TermTip hintKey="etaRatioHint">{t('etaRatio')}</TermTip>
               <strong>{stats.medianRatio === null ? '-' : `${Math.round(stats.medianRatio * 100)}%`}</strong>
-              <small className="stat-term" tabIndex={0} aria-label={`${t('statsMedian')}. ${t('statsMedianHint')}`} data-tooltip={t('statsMedianHint')}>{t('statsMedian')}</small>
+              <TermTip as="small" hintKey="statsMedianHint">{t('statsMedian')}</TermTip>
             </div>
             <div className="stat-card">
-              <span className="stat-term" tabIndex={0} aria-label={`${t('p90')}. ${t('p90Hint')}`} data-tooltip={t('p90Hint')}>{t('p90')}</span>
+              <TermTip hintKey="p90Hint">{t('p90')}</TermTip>
               <strong>{stats.p90Ratio === null ? '-' : `${Math.round(stats.p90Ratio * 100)}%`}</strong>
-              <small className="stat-term" tabIndex={0} aria-label={`${t('statsP90')}. ${t('statsP90Hint')}`} data-tooltip={t('statsP90Hint')}>{t('statsP90')}</small>
+              <TermTip as="small" hintKey="statsP90Hint">{t('statsP90')}</TermTip>
             </div>
           </div>
         </section>
 
         {templates.length > 0 && (
           <section className="templates-section">
-            <div className="section-head"><div><span className="section-kicker">{t('templatesKicker')}</span><h2>{t('templates')}</h2></div></div>
-            <div className="template-grid">{templates.map((template) => <article className="template-card" key={template.id}><div><strong>{template.title}</strong><span>{template.strategy === 'converging' ? t('convergingShort') : t('exponentialShort')} · ETA {formatDuration(template.etaMs)}</span></div><div className="task-actions"><button type="button" className="ghost" onClick={() => addFromTemplate(template.id)}>{t('useTemplate')}</button><button type="button" className="ghost danger" onClick={() => deleteTemplate(template.id)}>{t('delete')}</button></div></article>)}</div>
+            <div className="section-head"><div><span className="section-kicker"><TermTip hintKey="templatesKickerHint">{t('templatesKicker')}</TermTip></span><h2><TermTip hintKey="templatesHint">{t('templates')}</TermTip></h2></div></div>
+            <div className="template-grid">{templates.map((template) => <article className="template-card" key={template.id}><div><strong>{template.title}</strong><span><TermTip hintKey={template.strategy === 'converging' ? 'convergingHint' : 'exponentialHint'}>{template.strategy === 'converging' ? t('convergingShort') : t('exponentialShort')}</TermTip> · <TermTip hintKey="etaHint">ETA</TermTip> {formatDuration(template.etaMs)}</span></div><div className="task-actions"><button type="button" className="ghost" onClick={() => addFromTemplate(template.id)}>{t('useTemplate')}</button><button type="button" className="ghost danger" onClick={() => deleteTemplate(template.id)}>{t('delete')}</button></div></article>)}</div>
           </section>
         )}
 
         {archivedTasks.length > 0 && (
           <section>
-            <div className="section-head"><h2>{t('archived')}</h2></div>
+            <div className="section-head"><h2><TermTip hintKey="archivedHint">{t('archived')}</TermTip></h2></div>
             <div className="task-list">
               {archivedTasks.map((task) => (
                 <TaskCard key={task.id} task={task} now={now} done onCheck={() => {}} onDelete={deleteTask} onOpenMemo={setMemoId} onUpdateTitle={updateTaskTitle} onReopen={reopenTask} />

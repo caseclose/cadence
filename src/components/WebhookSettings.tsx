@@ -10,6 +10,7 @@ import {
   testSavedWebhooks,
   upsertWebhook,
 } from '../notify/webhooks';
+import { TermTip } from './TermTip';
 
 const PROVIDER_KEYS: Record<WebhookProvider, { label: string; hint: string }> = {
   feishu: { label: 'webhookFeishu', hint: 'webhookHintFeishu' },
@@ -137,7 +138,7 @@ export function WebhookSettings() {
   return (
     <details className="webhook-card">
       <summary className="webhook-summary">
-        <span>{t('webhookTitle')}</span>
+        <TermTip hintKey="webhookTermHint">{t('webhookTitle')}</TermTip>
         <span className="webhook-badge">
           {configuredCount > 0 ? t('webhookConfigured', { count: String(configuredCount) }) : t('webhookRecommended')}
         </span>

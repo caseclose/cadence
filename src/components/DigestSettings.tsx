@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getDigestPreference, saveDigestPreference } from '../notify/digest';
 import { useStore } from '../store/useStore';
 import { t, useLocale } from '../i18n';
+import { TermTip } from './TermTip';
 
 export function DigestSettings() {
   useLocale();
@@ -30,7 +31,7 @@ export function DigestSettings() {
     });
     setMessage(err ?? t('digestSaved'));
   };
-  return <details className="webhook-card"><summary className="webhook-summary"><span>{t('digestTitle')}</span></summary><div className="webhook-body">
+  return <details className="webhook-card"><summary className="webhook-summary"><TermTip hintKey="digestHint">{t('digestTitle')}</TermTip></summary><div className="webhook-body">
     <p className="webhook-lead">{t('digestLead')}</p>
     <label className="webhook-content-toggle"><input type="checkbox" checked={enabled} onChange={(event) => setEnabled(event.target.checked)} /><span>{t('digestEnable')}</span></label>
     <label className="webhook-label">{t('digestTime')}<input className="webhook-input" type="time" step="300" value={time} onChange={(event) => setTime(event.target.value)} /></label>

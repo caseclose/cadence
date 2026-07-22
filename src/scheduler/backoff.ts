@@ -124,11 +124,28 @@ export function schedule(
     }
 
     case 'snooze': {
-      // Explicit user delay: nextFireAt = now + durationMs.
-      // Only floor at minIntervalMs (anti-spam). Do NOT cap at maxIntervalMs —
-      // quick snoozes like "tomorrow 9:00" routinely exceed the 4h backoff ceiling.
-      const duration = Math.max(action.durationMs, cfg.minIntervalMs);
-      return { ...base, state: 'snoozed', nextFireAt: now + duration };
+      // Absolute target (e.g. "tomorrow 09:00"): keep the wall-clock moment.
+      // If already past, roll forward one day at a time, then floor at now+minInterval.
+      if ('fireAt' in action) {
+        let fireAt = action.fireAt;
+        const day = 24 * 60 * 60_000;
+        while (fireAt <= now) fireAt += day;
+        return {
+          ...base,
+          state: 'snoozed',
+          nextFireAt: Math.max(fireAt, now + cfg.minIntervalMs),
+        };
+      }
+      // Relative snooze (+10m / +1h): extend from the later of now and the
+      // scheduled fire — never shrink remaining time when the modal is opened early.
+      // Floor duration at minIntervalMs only; do NOT cap at maxIntervalMs.
+      const durationMs = 'durationMs' in action ? action.durationMs : cfg.minIntervalMs;
+      const duration = Math.max(durationMs, cfg.minIntervalMs);
+      return {
+        ...base,
+        state: 'snoozed',
+        nextFireAt: Math.max(now, task.nextFireAt) + duration,
+      };
     }
 
     case 'checked_not_done': {

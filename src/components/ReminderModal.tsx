@@ -4,6 +4,7 @@ import { Action, Task } from '../scheduler/types';
 import { parseWhen, formatDuration, formatFireAt } from '../util/time';
 import { WhenFormatGuide } from './WhenFormatGuide';
 import { MarkdownView } from './MarkdownView';
+import { TermTip } from './TermTip';
 
 interface Props {
   task: Task;
@@ -22,11 +23,11 @@ export function ReminderModal({ task, onResolve, onClose, onOpenMemo }: Props) {
     onClose();
   };
 
-  const tomorrowMorning = () => {
+  const tomorrowMorningFireAt = () => {
     const next = new Date();
     next.setDate(next.getDate() + 1);
     next.setHours(9, 0, 0, 0);
-    return Math.max(5 * 60_000, next.getTime() - Date.now());
+    return next.getTime();
   };
 
   const hint =
@@ -45,7 +46,7 @@ export function ReminderModal({ task, onResolve, onClose, onOpenMemo }: Props) {
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal reminder-modal" onClick={(e) => e.stopPropagation()}>
         <header className="reminder-head">
-          <span className="reminder-kicker">{t('reminderKicker')}</span>
+          <span className="reminder-kicker"><TermTip hintKey="reminderKickerHint">{t('reminderKicker')}</TermTip></span>
           <h2 className="modal-title">{t('reminderTitle', { title: task.title })}</h2>
           <p className="modal-sub">
             {task.strategy === 'converging' ? t('convergingPrompt') : t('pollingPrompt')}
@@ -83,15 +84,15 @@ export function ReminderModal({ task, onResolve, onClose, onOpenMemo }: Props) {
         </div>
 
         <div className="modal-snooze">
-          <span className="modal-snooze-label">{t('quickSnooze')}</span>
+          <TermTip className="modal-snooze-label" hintKey="quickSnoozeHint">{t('quickSnooze')}</TermTip>
           <div className="modal-snooze-chips">
-            <button type="button" className="snooze-chip" onClick={() => act({ type: 'snooze', durationMs: 10 * 60_000 })}>
+            <button type="button" className="snooze-chip" title={t('quickSnoozeHint')} onClick={() => act({ type: 'snooze', durationMs: 10 * 60_000 })}>
               {t('snooze10m')}
             </button>
-            <button type="button" className="snooze-chip" onClick={() => act({ type: 'snooze', durationMs: 60 * 60_000 })}>
+            <button type="button" className="snooze-chip" title={t('quickSnoozeHint')} onClick={() => act({ type: 'snooze', durationMs: 60 * 60_000 })}>
               {t('snooze1h')}
             </button>
-            <button type="button" className="snooze-chip" onClick={() => act({ type: 'snooze', durationMs: tomorrowMorning() })}>
+            <button type="button" className="snooze-chip" title={t('quickSnoozeHint')} onClick={() => act({ type: 'snooze', fireAt: tomorrowMorningFireAt() })}>
               {t('snoozeTomorrow')}
             </button>
           </div>
@@ -102,11 +103,13 @@ export function ReminderModal({ task, onResolve, onClose, onOpenMemo }: Props) {
             placeholder={t('reestimatePlaceholder')}
             value={reWhen}
             onChange={(e) => setReWhen(e.target.value)}
+            title={t('reestimateTermHint')}
           />
           <button
             type="button"
             className="reminder-reestimate-btn"
             disabled={!parsed || parsed.etaMs <= 0}
+            title={t('reestimateTermHint')}
             onClick={() => parsed && act({ type: 'reestimate', etaMs: parsed.etaMs })}
           >
             {t('reestimate')}

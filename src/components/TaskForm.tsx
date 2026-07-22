@@ -4,6 +4,7 @@ import { Strategy } from '../scheduler/types';
 import { parseWhen, formatDuration, formatFireAt } from '../util/time';
 import { WhenFormatGuide } from './WhenFormatGuide';
 import { parseTaskPrefill } from '../util/taskPrefill';
+import { TermTip } from './TermTip';
 
 interface Props {
   onAdd: (input: { title: string; note?: string; strategy: Strategy; etaMs: number }) => void;
@@ -45,7 +46,7 @@ export function TaskForm({ onAdd, disabled }: Props) {
 
   return (
     <form className={`card form-card form${disabled ? ' form-disabled' : ''}`} onSubmit={submit}>
-      <h3 className="form-card-title">{t('formTitle')}</h3>
+      <h3 className="form-card-title"><TermTip hintKey="suspendHint">{t('formTitle')}</TermTip></h3>
       {disabled && <p className="form-login-hint">{t('loginFirst')}</p>}
       <input
         className="field-full"
@@ -66,13 +67,14 @@ export function TaskForm({ onAdd, disabled }: Props) {
           className="field-strategy"
           value={strategy}
           onChange={(e) => setStrategy(e.target.value as Strategy)}
-          aria-label={t('backoffStrategy')}
+          aria-label={`${t('backoffStrategy')}. ${t('backoffStrategyHint')}`}
+          title={t(strategy === 'converging' ? 'convergingHint' : 'exponentialHint')}
           disabled={disabled}
         >
-          <option value="converging">{t('converging')}</option>
-          <option value="exponential">{t('exponential')}</option>
+          <option value="converging" title={t('convergingHint')}>{t('converging')}</option>
+          <option value="exponential" title={t('exponentialHint')}>{t('exponential')}</option>
         </select>
-        <button type="submit" className="btn-submit" disabled={!canSubmit}>
+        <button type="submit" className="btn-submit" disabled={!canSubmit} title={t('suspendHint')}>
           {t('suspend')}
         </button>
       </div>

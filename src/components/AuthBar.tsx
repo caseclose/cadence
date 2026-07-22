@@ -7,6 +7,7 @@ import {
   isPushConfigured,
   isPushSupported,
 } from '../notify/push';
+import { TermTip } from './TermTip';
 
 export function AuthBar() {
   useLocale();
@@ -36,7 +37,7 @@ export function AuthBar() {
   }, [user]);
 
   if (!cloudEnabled) {
-    return <span className="auth-chip auth-chip-muted">{t('localMode')}</span>;
+    return <TermTip className="auth-chip auth-chip-muted" hintKey="localModeHint">{t('localMode')}</TermTip>;
   }
 
   if (user) {
@@ -79,7 +80,7 @@ export function AuthBar() {
             type="button"
             className="btn-sm btn-ghost"
             disabled={pushBusy}
-            title={pushOn ? t('disablePushTitle') : t('enablePushTitle')}
+            title={pushOn ? t('disablePushTitle') : t('enablePushHint')}
             onClick={() => void togglePush()}
           >
             {pushBusy ? '…' : pushOn ? t('pushEnabled') : t('enablePush')}

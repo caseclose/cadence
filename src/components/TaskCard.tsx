@@ -3,6 +3,7 @@ import { formatRelative, formatDuration } from '../util/time';
 import { noteSummary } from '../util/markdown';
 import { useState, type CSSProperties } from 'react';
 import { useLocale, t } from '../i18n';
+import { TermTip } from './TermTip';
 
 interface Props {
   task: Task;
@@ -28,6 +29,13 @@ export function TaskCard({
   done,
 }: Props) {
   useLocale();
+  const stateHintKey: Record<Task['state'], string> = {
+    waiting: 'waitingHint',
+    due: 'dueHint',
+    polling: 'pollingHint',
+    snoozed: 'snoozedHint',
+    done: 'doneStateHint',
+  };
   const stateLabel: Record<Task['state'], string> = {
     waiting: t('waiting'), due: t('due'), polling: t('polling'),
     snoozed: t('snoozed'), done: t('done'),
@@ -85,11 +93,19 @@ export function TaskCard({
           </button>
         )}
         <div className="task-meta">
-          <span className={`badge s-${task.state}`}>{stateLabel[task.state]}</span>
-          <span className="badge strategy">
+          <TermTip className={`badge s-${task.state}`} hintKey={stateHintKey[task.state]}>
+            {stateLabel[task.state]}
+          </TermTip>
+          <TermTip
+            className="badge strategy"
+            hintKey={task.strategy === 'converging' ? 'convergingHint' : 'exponentialHint'}
+          >
             {task.strategy === 'converging' ? t('convergingShort') : t('exponentialShort')}
+          </TermTip>
+          <span>
+            <TermTip hintKey="etaHint">ETA</TermTip>
+            {' '}{formatDuration(task.etaMs)}
           </span>
-          <span>ETA {formatDuration(task.etaMs)}</span>
           {!done && (
             <>
               <span>· {t('reminderCount')} {task.attempts}</span>
@@ -105,7 +121,11 @@ export function TaskCard({
               {task.note?.trim() ? t('memo') : t('writeMemo')}
             </button>
           )}
-          {onSaveTemplate && <button type="button" className="ghost" onClick={() => onSaveTemplate(task)}>{t('saveTemplate')}</button>}
+          {onSaveTemplate && (
+            <button type="button" className="ghost" title={t('templatesHint')} onClick={() => onSaveTemplate(task)}>
+              {t('saveTemplate')}
+            </button>
+          )}
           <button type="button" className="ghost" onClick={() => onCheck(task.id)}>
             {t('viewNow')}
           </button>
@@ -122,7 +142,7 @@ export function TaskCard({
             </button>
           )}
           {onReopen && (
-            <button type="button" className="ghost" onClick={() => onReopen(task.id)}>
+            <button type="button" className="ghost" title={t('reopenHint')} onClick={() => onReopen(task.id)}>
               {t('reopen')}
             </button>
           )}

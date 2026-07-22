@@ -1,4 +1,5 @@
 import { useLocale, t } from '../i18n';
+import { TermTip } from './TermTip';
 
 export function ProjectIntro() {
   useLocale();
@@ -19,16 +20,18 @@ export function ProjectIntro() {
         <div className="intro-panel-inner">
           <p className="intro-copy">{t('introCopy')}</p>
           <h3 className="intro-strategies-title">{t('introStrategiesTitle')}</h3>
-          <p className="intro-strategies-lead">{t('introStrategiesLead')}</p>
+          <p className="intro-strategies-lead">
+            {t('introStrategiesLead')}
+          </p>
           <div className="intro-strategies">
             <div className="intro-strategy">
-              <span className="intro-badge converging">{t('converging')}</span>
+              <TermTip className="intro-badge converging" hintKey="convergingHint">{t('converging')}</TermTip>
               <p className="intro-strategy-scene">{t('introConvergingScene')}</p>
               <p className="intro-strategy-rhythm">{t('introConvergingRhythm')}</p>
               <p className="intro-strategy-example">{t('introConvergingExample')}</p>
             </div>
             <div className="intro-strategy">
-              <span className="intro-badge exponential">{t('exponential')}</span>
+              <TermTip className="intro-badge exponential" hintKey="exponentialHint">{t('exponential')}</TermTip>
               <p className="intro-strategy-scene">{t('introExponentialScene')}</p>
               <p className="intro-strategy-rhythm">{t('introExponentialRhythm')}</p>
               <p className="intro-strategy-example">{t('introExponentialExample')}</p>
@@ -41,6 +44,7 @@ export function ProjectIntro() {
               href="https://github.com/caseclose/cadence/blob/main/docs/PRIVACY-E2EE.md"
               target="_blank"
               rel="noreferrer"
+              title={t('e2eeHint')}
             >
               {t('introPrivacyLink')}
             </a>

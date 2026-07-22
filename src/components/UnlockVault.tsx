@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLocale, t } from '../i18n';
 import { useStore } from '../store/useStore';
+import { TermTip } from './TermTip';
 
 export function UnlockVault() {
   useLocale();
@@ -23,10 +24,10 @@ export function UnlockVault() {
 
   return (
     <div className="vault-card card">
-      <h3 className="vault-title">🔐 {t('decryptTitle')}</h3>
+      <h3 className="vault-title">🔐 <TermTip hintKey="e2eeHint">{t('decryptTitle')}</TermTip></h3>
       <p className="vault-copy">
         {t('vaultCopy1')}
-        <strong>{t('vaultCopyCipher')}</strong>
+        <TermTip hintKey="ciphertextHint"><strong>{t('vaultCopyCipher')}</strong></TermTip>
         {t('vaultCopy2')}
         {t('loginPassword')}
         {t('vaultCopy3')} {t('unlock')}

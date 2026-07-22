@@ -2143,6 +2143,7 @@ button.link:hover:not(:disabled) {
 .stat-card { min-width: 0; padding: 16px; border: 1px solid color-mix(in srgb, var(--border) 80%, transparent); border-radius: 14px; background: color-mix(in srgb, var(--panel) 80%, transparent); }
 .stat-card span, .stat-card small { display: block; color: var(--muted); font-size: 12px; }
 .stat-card strong { display: block; margin: 5px 0 2px; color: var(--accent); font-size: 26px; letter-spacing: -0.05em; line-height: 1; }
+.term-tip,
 .stat-term {
   position: relative;
   width: fit-content;
@@ -2151,15 +2152,19 @@ button.link:hover:not(:disabled) {
   border-bottom: 1px dashed color-mix(in srgb, var(--muted) 70%, transparent);
   outline: none;
 }
+.term-tip:hover,
+.term-tip:focus-visible,
 .stat-term:hover,
 .stat-term:focus-visible {
   color: var(--accent);
   border-bottom-color: color-mix(in srgb, var(--accent) 55%, transparent);
 }
+.term-tip:focus-visible,
 .stat-term:focus-visible {
   border-radius: 2px;
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent);
 }
+.term-tip::after,
 .stat-term::after {
   content: attr(data-tooltip);
   position: absolute;
@@ -2185,10 +2190,27 @@ button.link:hover:not(:disabled) {
   transform: translateY(4px);
   transition: opacity 0.12s ease, transform 0.12s ease;
 }
+.term-tip:hover::after,
+.term-tip:focus-visible::after,
 .stat-term:hover::after,
 .stat-term:focus-visible::after {
   opacity: 1;
   transform: translateY(0);
+}
+/* Badges / intro chips keep chrome; tip underline sits under the label */
+.badge.term-tip,
+.intro-badge.term-tip,
+.auth-chip.term-tip {
+  border-bottom: none;
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--muted) 55%, transparent);
+}
+.badge.term-tip:hover,
+.badge.term-tip:focus-visible,
+.intro-badge.term-tip:hover,
+.intro-badge.term-tip:focus-visible,
+.auth-chip.term-tip:hover,
+.auth-chip.term-tip:focus-visible {
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--accent) 55%, transparent);
 }
 .template-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .template-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px; border: 1px solid var(--border); border-radius: 16px; background: var(--panel); box-shadow: var(--shadow-sm); }
