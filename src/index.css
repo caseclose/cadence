@@ -1208,8 +1208,8 @@ button.link:hover:not(:disabled) {
   position: relative;
   overflow: hidden;
   border-color: color-mix(in srgb, var(--task-color, var(--border)) 24%, var(--border));
-  background: linear-gradient(135deg, color-mix(in srgb, var(--task-color, var(--panel)) 7%, var(--panel)) 0%, var(--panel) 52%, color-mix(in srgb, var(--task-color, var(--panel)) 4%, var(--panel)) 100%);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--task-color, transparent) 8%, transparent);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--task-color, var(--panel)) 10%, var(--panel)) 0%, var(--panel) 52%, color-mix(in srgb, var(--task-color, var(--panel)) 6%, var(--panel)) 100%);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--task-color, transparent) 11%, transparent);
   transition: transform 0.2s ease, border-color 0.3s, box-shadow 0.3s, background 0.3s;
 }
 
@@ -1241,7 +1241,7 @@ button.link:hover:not(:disabled) {
   width: var(--task-progress, 0%);
   max-width: 100%;
   pointer-events: none;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--task-color) 10%, transparent), transparent);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--task-color) 14%, transparent), transparent);
   opacity: 0.8;
   transition: width 0.8s ease, background 0.35s;
 }
