@@ -6,6 +6,7 @@ import {
   listWebhooks,
   type NotificationWebhook,
   type WebhookProvider,
+  testSavedWebhooks,
   upsertWebhook,
 } from '../notify/webhooks';
 
@@ -17,6 +18,7 @@ export function WebhookSettings() {
   const [url, setUrl] = useState('');
   const [secret, setSecret] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
+  const [msgOk, setMsgOk] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -51,6 +53,7 @@ export function WebhookSettings() {
   const save = async () => {
     setBusy(true);
     setMsg(null);
+    setMsgOk(false);
     const err = await upsertWebhook({
       userId: user.id,
       provider,
@@ -63,13 +66,15 @@ export function WebhookSettings() {
       setMsg(err);
       return;
     }
-    setMsg('已保存。到点后会发到该群（通用文案，不含任务明文）。');
+    setMsgOk(true);
+    setMsg('已保存。可点「发送测试」立刻验证；到点后也会自动发到该群。');
     await reload();
   };
 
   const remove = async () => {
     setBusy(true);
     setMsg(null);
+    setMsgOk(false);
     const err = await deleteWebhook(user.id, provider);
     setBusy(false);
     if (err) {
@@ -78,8 +83,39 @@ export function WebhookSettings() {
     }
     setUrl('');
     setSecret('');
+    setMsgOk(true);
     setMsg('已删除该通道');
     await reload();
+  };
+
+  const test = async () => {
+    setBusy(true);
+    setMsg(null);
+    setMsgOk(false);
+    // Persist current form first so test uses latest URL/secret
+    if (url.trim()) {
+      const saveErr = await upsertWebhook({
+        userId: user.id,
+        provider,
+        url,
+        secret,
+        enabled: true,
+      });
+      if (saveErr) {
+        setBusy(false);
+        setMsg(saveErr);
+        return;
+      }
+      await reload();
+    }
+    const err = await testSavedWebhooks();
+    setBusy(false);
+    if (err) {
+      setMsg(err);
+      return;
+    }
+    setMsgOk(true);
+    setMsg('测试消息已发送，请查看飞书/企微/钉钉群。');
   };
 
   return (
@@ -92,7 +128,7 @@ export function WebhookSettings() {
       </summary>
       <div className="webhook-body">
         <p className="webhook-lead">
-          大陆 Chrome 的网页推送常不可用。配置群机器人 Webhook 后，关页也能在群里收到到点提醒。
+          大陆 Chrome 的网页推送常不可用。配置群机器人 Webhook 后，关页也能在群里收到到点提醒。若飞书未开启「签名校验」，签名密钥请留空。
         </p>
 
         <div className="webhook-tabs" role="tablist">
@@ -130,11 +166,11 @@ export function WebhookSettings() {
 
         {(provider === 'feishu' || provider === 'dingtalk') && (
           <label className="webhook-label">
-            签名密钥（可选）
+            签名密钥（可选；未开签名校验请留空）
             <input
               className="webhook-input"
               type="password"
-              placeholder={provider === 'dingtalk' ? 'SEC 开头的密钥' : '签名校验密钥'}
+              placeholder={provider === 'dingtalk' ? 'SEC 开头的密钥' : '仅在开启签名校验时填写'}
               value={secret}
               onChange={(e) => setSecret(e.target.value)}
               autoComplete="off"
@@ -151,6 +187,14 @@ export function WebhookSettings() {
           >
             保存
           </button>
+          <button
+            type="button"
+            className="btn-sm btn-ghost"
+            disabled={busy || (!url.trim() && !existing)}
+            onClick={() => void test()}
+          >
+            发送测试
+          </button>
           {existing && (
             <button
               type="button"
@@ -162,7 +206,9 @@ export function WebhookSettings() {
             </button>
           )}
         </div>
-        {msg && <p className="webhook-msg">{msg}</p>}
+        {msg && (
+          <p className={`webhook-msg${msgOk ? '' : ' is-error'}`}>{msg}</p>
+        )}
       </div>
     </details>
   );

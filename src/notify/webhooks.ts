@@ -123,3 +123,39 @@ export async function setWebhookEnabled(
   if (error) return error.message;
   return null;
 }
+
+/** Ask Edge Function to POST a test message to this user's saved webhooks. */
+export async function testSavedWebhooks(): Promise<string | null> {
+  if (!supabase) return '未配置云同步';
+  const { data, error } = await supabase.functions.invoke('push-due', {
+    body: { action: 'test-webhook' },
+  });
+  if (error) {
+    // functions.invoke wraps non-2xx; try to surface server message
+    const ctx = (error as { context?: Response }).context;
+    if (ctx) {
+      try {
+        const j = (await ctx.json()) as { error?: string; results?: { detail?: string }[] };
+        if (j.error) return j.error;
+        const fail = j.results?.find((r) => r.detail)?.detail;
+        if (fail) return fail;
+      } catch {
+        /* ignore */
+      }
+    }
+    return error.message || '测试发送失败';
+  }
+  const payload = data as {
+    ok?: boolean;
+    error?: string;
+    results?: { provider: string; ok: boolean; detail?: string }[];
+  } | null;
+  if (!payload) return '测试无响应';
+  if (payload.error) return payload.error;
+  if (payload.ok) return null;
+  const fail = payload.results?.find((r) => !r.ok);
+  return fail?.detail
+    ? `${fail.provider}: ${fail.detail}`
+    : '测试发送失败（请检查签名密钥是否与飞书机器人一致；未开签名校验请留空密钥）';
+}
+

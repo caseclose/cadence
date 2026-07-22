@@ -54,12 +54,54 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
     const vapidPublic = Deno.env.get('VAPID_PUBLIC_KEY');
     const vapidPrivate = Deno.env.get('VAPID_PRIVATE_KEY');
     const vapidSubject = Deno.env.get('VAPID_SUBJECT') ?? 'mailto:admin@example.com';
 
     if (!supabaseUrl || !serviceKey) {
       return json({ error: 'missing SUPABASE_URL / SERVICE_ROLE_KEY' }, 500);
+    }
+
+    // Client "发送测试"：用用户 JWT 识别身份，向其已保存的 webhook 发一条试消息。
+    let reqBody: { action?: string } = {};
+    try {
+      reqBody = (await req.clone().json()) as { action?: string };
+    } catch {
+      reqBody = {};
+    }
+    if (reqBody.action === 'test-webhook') {
+      if (!anonKey) return json({ error: 'missing SUPABASE_ANON_KEY' }, 500);
+      const authHeader = req.headers.get('Authorization');
+      if (!authHeader) return json({ error: '需要登录' }, 401);
+      const userClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } },
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+      const { data: userData, error: userErr } = await userClient.auth.getUser();
+      if (userErr || !userData.user) return json({ error: '登录无效' }, 401);
+
+      const admin = createClient(supabaseUrl, serviceKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+      const { data: hooks, error: hookErr } = await admin
+        .from('notification_webhooks')
+        .select('id, user_id, provider, url, secret, enabled')
+        .eq('user_id', userData.user.id)
+        .eq('enabled', true);
+      if (hookErr) return json({ error: hookErr.message }, 500);
+      const list = (hooks ?? []) as WebhookRow[];
+      if (list.length === 0) {
+        return json({ error: '尚未配置已启用的提醒通道，请先保存 Webhook' }, 400);
+      }
+
+      const results: { provider: string; ok: boolean; detail?: string }[] = [];
+      for (const hook of list) {
+        const r = await sendChatWebhook(hook, 'Cadence · 测试消息：提醒通道已连通。');
+        results.push({ provider: hook.provider, ok: r.ok, detail: r.detail });
+      }
+      const allOk = results.every((r) => r.ok);
+      return json({ ok: allOk, results }, allOk ? 200 : 502);
     }
 
     const pushEnabled = Boolean(vapidPublic && vapidPrivate);
@@ -164,8 +206,9 @@ Deno.serve(async (req) => {
 
       for (const hook of hooksByUser.get(userId) ?? []) {
         try {
-          const ok = await sendChatWebhook(hook, REMINDER_TEXT);
-          if (ok) webhookSent += 1;
+          const r = await sendChatWebhook(hook, REMINDER_TEXT);
+          if (r.ok) webhookSent += 1;
+          else console.error('webhook failed', hook.provider, r.detail);
         } catch (err) {
           console.error('webhook failed', hook.provider, err);
         }
@@ -207,19 +250,46 @@ Deno.serve(async (req) => {
   }
 });
 
-async function sendChatWebhook(hook: WebhookRow, text: string): Promise<boolean> {
+async function sendChatWebhook(
+  hook: WebhookRow,
+  text: string,
+): Promise<{ ok: boolean; detail?: string }> {
   const { url, body } = await buildWebhookRequest(hook, text);
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
+  const raw = await res.text().catch(() => '');
   if (!res.ok) {
-    const t = await res.text().catch(() => '');
-    console.error('webhook HTTP', hook.provider, res.status, t);
-    return false;
+    const detail = `HTTP ${res.status}: ${raw.slice(0, 200)}`;
+    console.error('webhook HTTP', hook.provider, detail);
+    return { ok: false, detail };
   }
-  return true;
+  // Feishu / WeCom / DingTalk often return HTTP 200 with a business error code.
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    if (hook.provider === 'feishu') {
+      const code = parsed.code;
+      if (code !== undefined && code !== 0 && code !== '0') {
+        const detail = typeof parsed.msg === 'string' ? parsed.msg : JSON.stringify(parsed);
+        console.error('feishu webhook business error', parsed);
+        return { ok: false, detail };
+      }
+    }
+    if (hook.provider === 'wecom' || hook.provider === 'dingtalk') {
+      const errcode = parsed.errcode;
+      if (errcode !== undefined && errcode !== 0 && errcode !== '0') {
+        const detail =
+          typeof parsed.errmsg === 'string' ? parsed.errmsg : JSON.stringify(parsed);
+        console.error(`${hook.provider} webhook business error`, parsed);
+        return { ok: false, detail };
+      }
+    }
+  } catch {
+    // non-JSON success body — treat as ok if HTTP succeeded
+  }
+  return { ok: true };
 }
 
 async function buildWebhookRequest(

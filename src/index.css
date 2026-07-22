@@ -475,6 +475,10 @@ body {
   color: var(--accent);
 }
 
+.webhook-msg.is-error {
+  color: var(--warn);
+}
+
 
 .btn-sm {
   padding: 8px 14px;
