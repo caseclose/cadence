@@ -37,6 +37,7 @@ type Dictionary = Record<string, string>;
 const zh: Dictionary = {
   appName: 'Cadence',
   brandTagline: '把等待从脑中卸载下来',
+  reminderKicker: 'CHECK-IN',
   queueKicker: 'NOW IN FLIGHT',
   statsKicker: 'PERSONAL SIGNALS',
   templatesKicker: 'REUSABLE FLOWS',
@@ -242,6 +243,7 @@ const zh: Dictionary = {
 const en: Dictionary = {
   appName: 'Cadence',
   brandTagline: 'Unload waiting from your mind',
+  reminderKicker: 'CHECK-IN',
   queueKicker: 'NOW IN FLIGHT',
   statsKicker: 'PERSONAL SIGNALS',
   templatesKicker: 'REUSABLE FLOWS',

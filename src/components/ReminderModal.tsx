@@ -43,11 +43,14 @@ export function ReminderModal({ task, onResolve, onClose, onOpenMemo }: Props) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-title">{t('reminderTitle', { title: task.title })}</div>
-        <div className="modal-sub">
-          {task.strategy === 'converging' ? t('convergingPrompt') : t('pollingPrompt')}
-        </div>
+      <div className="modal reminder-modal" onClick={(e) => e.stopPropagation()}>
+        <header className="reminder-head">
+          <span className="reminder-kicker">{t('reminderKicker')}</span>
+          <h2 className="modal-title">{t('reminderTitle', { title: task.title })}</h2>
+          <p className="modal-sub">
+            {task.strategy === 'converging' ? t('convergingPrompt') : t('pollingPrompt')}
+          </p>
+        </header>
 
         {task.note?.trim() && (
           <button
@@ -59,29 +62,39 @@ export function ReminderModal({ task, onResolve, onClose, onOpenMemo }: Props) {
             }}
             title={t('openMemoEdit')}
           >
-            <div className="modal-memo-label">{t('memo')}</div>
+            <div className="modal-memo-top">
+              <span className="modal-memo-label">{t('memo')}</span>
+              <span className="modal-memo-edit-hint">{t('clickMemoEdit')}</span>
+            </div>
             <MarkdownView source={task.note} className="modal-memo-body" />
-            <div className="modal-memo-edit-hint">{t('clickMemoEdit')}</div>
           </button>
         )}
 
         <div className="modal-actions">
-          <button type="button" className="primary" onClick={() => act({ type: 'done' })}>
+          <button type="button" className="primary reminder-done" onClick={() => act({ type: 'done' })}>
             {t('doneAction')}
           </button>
-          <button type="button" onClick={() => act({ type: 'checked_not_done' })}>
+          <button type="button" className="reminder-secondary" onClick={() => act({ type: 'checked_not_done' })}>
             {t('notDone')}
           </button>
-          <button type="button" onClick={() => act({ type: 'no_resources' })}>
+          <button type="button" className="reminder-secondary" onClick={() => act({ type: 'no_resources' })}>
             {t('noResources')}
           </button>
         </div>
 
         <div className="modal-snooze">
-          <span>{t('quickSnooze')}</span>
-          <button type="button" onClick={() => act({ type: 'snooze', durationMs: 10 * 60_000 })}>{t('snooze10m')}</button>
-          <button type="button" onClick={() => act({ type: 'snooze', durationMs: 60 * 60_000 })}>{t('snooze1h')}</button>
-          <button type="button" onClick={() => act({ type: 'snooze', durationMs: tomorrowMorning() })}>{t('snoozeTomorrow')}</button>
+          <span className="modal-snooze-label">{t('quickSnooze')}</span>
+          <div className="modal-snooze-chips">
+            <button type="button" className="snooze-chip" onClick={() => act({ type: 'snooze', durationMs: 10 * 60_000 })}>
+              {t('snooze10m')}
+            </button>
+            <button type="button" className="snooze-chip" onClick={() => act({ type: 'snooze', durationMs: 60 * 60_000 })}>
+              {t('snooze1h')}
+            </button>
+            <button type="button" className="snooze-chip" onClick={() => act({ type: 'snooze', durationMs: tomorrowMorning() })}>
+              {t('snoozeTomorrow')}
+            </button>
+          </div>
         </div>
 
         <div className="modal-reestimate">
@@ -92,6 +105,7 @@ export function ReminderModal({ task, onResolve, onClose, onOpenMemo }: Props) {
           />
           <button
             type="button"
+            className="reminder-reestimate-btn"
             disabled={!parsed || parsed.etaMs <= 0}
             onClick={() => parsed && act({ type: 'reestimate', etaMs: parsed.etaMs })}
           >

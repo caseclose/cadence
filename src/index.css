@@ -366,7 +366,6 @@ body {
 /* --- Webhook settings (Feishu / WeCom / DingTalk) --- */
 
 .webhook-card {
-  margin-bottom: 1.25rem;
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--panel);
@@ -1432,9 +1431,9 @@ button.link:hover:not(:disabled) {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: var(--backdrop);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background: color-mix(in srgb, var(--backdrop) 88%, #000);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1445,25 +1444,64 @@ button.link:hover:not(:disabled) {
 
 .modal {
   background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 20px;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, var(--accent) 20%);
+  border-radius: 22px;
   padding: 28px;
   width: 100%;
   max-width: 460px;
-  box-shadow: var(--shadow-lg);
+  box-shadow:
+    0 24px 64px color-mix(in srgb, #000 35%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--accent) 8%, transparent);
   animation: slide-up 0.25s ease;
 }
 
+.reminder-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-height: min(92vh, 820px);
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted) 40%, transparent) transparent;
+}
+
+.reminder-modal::-webkit-scrollbar {
+  width: 6px;
+}
+
+.reminder-modal::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted) 35%, transparent);
+  border-radius: 999px;
+}
+
+.reminder-head {
+  margin-bottom: 4px;
+}
+
+.reminder-kicker {
+  display: inline-block;
+  margin-bottom: 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
 .modal-title {
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  margin: 0;
+  font-size: 21px;
+  font-weight: 750;
+  letter-spacing: -0.03em;
+  line-height: 1.3;
 }
 
 .modal-sub {
   color: var(--muted);
   font-size: 14px;
-  margin: 8px 0 22px;
+  margin: 8px 0 0;
   line-height: 1.55;
 }
 
@@ -1473,58 +1511,184 @@ button.link:hover:not(:disabled) {
   color: inherit;
   font: inherit;
   text-align: left;
-  margin: -8px 0 20px;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--panel-2);
-  max-height: 220px;
-  overflow: auto;
+  margin: 18px 0 8px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+  border-radius: 14px;
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--accent-soft) 55%, var(--panel-2)) 0%,
+    var(--panel-2) 100%
+  );
+  overflow: hidden;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    transform 0.15s,
+    box-shadow 0.15s;
 }
 
 .modal-memo:hover {
   border-color: var(--accent);
-  background: var(--bg-subtle);
+  background: color-mix(in srgb, var(--accent-soft) 40%, var(--bg-subtle));
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.modal-memo-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px 0;
 }
 
 .modal-memo-edit-hint {
-  margin-top: 10px;
   color: var(--accent);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
 }
 
 .modal-memo-label {
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--muted);
-  margin-bottom: 8px;
 }
 
 .modal-memo-body {
-  font-size: 14px;
+  max-height: 160px;
+  margin: 8px 4px 10px;
+  padding: 0 10px 4px;
+  overflow: auto;
+  font-size: 13.5px;
+  line-height: 1.55;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted) 35%, transparent) transparent;
+}
+
+.modal-memo-body::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.modal-memo-body::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted) 32%, transparent);
+  border-radius: 999px;
+}
+
+.modal-memo-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-memo-body .md-view {
+  font-size: inherit;
 }
 
 .modal-actions {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.reminder-done {
+  min-height: 46px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+.reminder-done:hover:not(:disabled) {
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--accent) 36%, transparent);
+}
+
+.reminder-secondary {
+  min-height: 42px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel-2) 70%, transparent);
+  border-color: var(--border);
+  color: var(--text);
+  font-weight: 550;
+}
+
+.reminder-secondary:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.modal-snooze {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  margin: 16px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.modal-snooze-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.modal-snooze-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.snooze-chip {
+  flex: 1 1 auto;
+  min-width: max-content;
+  padding: 8px 12px !important;
+  border-radius: 999px !important;
+  border: 1px solid var(--border) !important;
+  background: color-mix(in srgb, var(--panel-2) 80%, transparent) !important;
+  color: var(--text) !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+}
+
+.snooze-chip:hover:not(:disabled) {
+  border-color: var(--accent) !important;
+  background: var(--accent-soft) !important;
+  color: var(--accent) !important;
 }
 
 .modal-reestimate {
   display: flex;
-  gap: 10px;
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid var(--border);
+  gap: 8px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
 }
 
 .modal-reestimate input {
   flex: 1;
+  border-radius: 11px;
+  min-height: 42px;
+}
+
+.reminder-reestimate-btn {
+  min-width: 72px;
+  border-radius: 11px;
+  font-weight: 650;
+}
+
+.reminder-modal .hint {
+  margin-top: 10px;
+}
+
+.reminder-modal .format-guide {
+  margin-top: 10px;
 }
 
 /* ── Memo modal + Markdown ────────────────────────────────────── */
