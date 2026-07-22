@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocale, t } from '../i18n';
 import { useStore } from '../store/useStore';
 import {
   WEBHOOK_PROVIDERS,
@@ -10,7 +11,14 @@ import {
   upsertWebhook,
 } from '../notify/webhooks';
 
+const PROVIDER_KEYS: Record<WebhookProvider, { label: string; hint: string }> = {
+  feishu: { label: 'webhookFeishu', hint: 'webhookHintFeishu' },
+  wecom: { label: 'webhookWecom', hint: 'webhookHintWecom' },
+  dingtalk: { label: 'webhookDingtalk', hint: 'webhookHintDingtalk' },
+};
+
 export function WebhookSettings() {
+  useLocale();
   const user = useStore((s) => s.user);
   const cloudEnabled = useStore((s) => s.cloudEnabled);
   const syncWebhookContent = useStore((s) => s.syncWebhookContent);
@@ -47,7 +55,7 @@ export function WebhookSettings() {
   if (!cloudEnabled || !user) return null;
 
   const existing = hooks.find((h) => h.provider === provider);
-  const active = WEBHOOK_PROVIDERS.find((p) => p.id === provider)!;
+  const activeKeys = PROVIDER_KEYS[provider];
   const configuredCount = hooks.filter((h) => h.enabled).length;
 
   const reload = async () => {
@@ -72,7 +80,7 @@ export function WebhookSettings() {
       return;
     }
     setMsgOk(true);
-    setMsg('已保存。可点「发送测试」立刻验证；到点后也会自动发到该群。');
+    setMsg(t('webhookSaved'));
     await reload();
     await syncWebhookContent();
   };
@@ -90,7 +98,7 @@ export function WebhookSettings() {
     setUrl('');
     setSecret('');
     setMsgOk(true);
-    setMsg('已删除该通道');
+    setMsg(t('webhookDeleted'));
     await reload();
     await syncWebhookContent();
   };
@@ -99,7 +107,6 @@ export function WebhookSettings() {
     setBusy(true);
     setMsg(null);
     setMsgOk(false);
-    // Persist current form first so test uses latest URL/secret
     if (url.trim()) {
       const saveErr = await upsertWebhook({
         userId: user.id,
@@ -124,25 +131,24 @@ export function WebhookSettings() {
       return;
     }
     setMsgOk(true);
-    setMsg('测试消息已发送，请查看飞书/企微/钉钉群。');
+    setMsg(t('webhookTestSent'));
   };
 
   return (
     <details className="webhook-card">
       <summary className="webhook-summary">
-        <span>提醒通道（飞书 / 企微 / 钉钉）</span>
+        <span>{t('webhookTitle')}</span>
         <span className="webhook-badge">
-          {configuredCount > 0 ? `已配置 ${configuredCount}` : '国内推荐'}
+          {configuredCount > 0 ? t('webhookConfigured', { count: String(configuredCount) }) : t('webhookRecommended')}
         </span>
       </summary>
       <div className="webhook-body">
-        <p className="webhook-lead">
-          大陆 Chrome 的网页推送常不可用。配置群机器人 Webhook 后，关页也能在群里收到到点提醒。若飞书未开启「签名校验」，签名密钥请留空。
-        </p>
+        <p className="webhook-lead">{t('webhookLead')}</p>
 
         <div className="webhook-tabs" role="tablist">
           {WEBHOOK_PROVIDERS.map((p) => {
             const on = hooks.some((h) => h.provider === p.id && h.enabled);
+            const keys = PROVIDER_KEYS[p.id];
             return (
               <button
                 key={p.id}
@@ -152,14 +158,14 @@ export function WebhookSettings() {
                 className={`webhook-tab${provider === p.id ? ' is-active' : ''}`}
                 onClick={() => setProvider(p.id)}
               >
-                {p.label}
-                {on ? ' · 开' : ''}
+                {t(keys.label)}
+                {on ? t('webhookOn') : ''}
               </button>
             );
           })}
         </div>
 
-        <p className="webhook-hint">{active.hint}</p>
+        <p className="webhook-hint">{t(activeKeys.hint)}</p>
 
         <label className="webhook-content-toggle">
           <input
@@ -167,11 +173,9 @@ export function WebhookSettings() {
             checked={includeContent}
             onChange={(e) => setIncludeContent(e.target.checked)}
           />
-          <span>发送任务明文内容（标题和备忘录）</span>
+          <span>{t('webhookIncludeContent')}</span>
         </label>
-        <p className="webhook-content-warning">
-          开启后，任务标题和备忘录会上传到云端并发送给机器人平台；默认关闭以保持端到端加密边界。
-        </p>
+        <p className="webhook-content-warning">{t('webhookIncludeContentWarning')}</p>
 
         <label className="webhook-label">
           Webhook URL
@@ -187,11 +191,11 @@ export function WebhookSettings() {
 
         {(provider === 'feishu' || provider === 'dingtalk') && (
           <label className="webhook-label">
-            签名密钥（可选；未开签名校验请留空）
+            {t('webhookSecretLabel')}
             <input
               className="webhook-input"
               type="password"
-              placeholder={provider === 'dingtalk' ? 'SEC 开头的密钥' : '仅在开启签名校验时填写'}
+              placeholder={provider === 'dingtalk' ? t('webhookSecretPlaceholderDingtalk') : t('webhookSecretPlaceholderFeishu')}
               value={secret}
               onChange={(e) => setSecret(e.target.value)}
               autoComplete="off"
@@ -206,7 +210,7 @@ export function WebhookSettings() {
             disabled={busy || !url.trim()}
             onClick={() => void save()}
           >
-            保存
+            {t('save')}
           </button>
           <button
             type="button"
@@ -214,7 +218,7 @@ export function WebhookSettings() {
             disabled={busy || (!url.trim() && !existing)}
             onClick={() => void test()}
           >
-            发送测试
+            {t('webhookTest')}
           </button>
           {existing && (
             <button
@@ -223,7 +227,7 @@ export function WebhookSettings() {
               disabled={busy}
               onClick={() => void remove()}
             >
-              删除
+              {t('delete')}
             </button>
           )}
         </div>

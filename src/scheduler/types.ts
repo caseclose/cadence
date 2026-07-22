@@ -30,6 +30,7 @@ export type Action =
   | { type: 'checked_not_done' } // looked, still running -> back off
   | { type: 'no_resources' } // too busy to look -> short snooze
   | { type: 'reestimate'; etaMs: number } // give a fresh ETA -> back to waiting
+  | { type: 'reopen' } // undo completion -> back to waiting
   | { type: 'done' }; // finished -> dequeue
 
 export interface BackoffConfig {

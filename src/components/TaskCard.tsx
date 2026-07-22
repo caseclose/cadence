@@ -11,10 +11,20 @@ interface Props {
   onDelete: (id: string) => void;
   onOpenMemo?: (id: string) => void;
   onUpdateTitle?: (id: string, title: string) => void;
+  onReopen?: (id: string) => void;
   done?: boolean;
 }
 
-export function TaskCard({ task, now, onCheck, onDelete, onOpenMemo, onUpdateTitle, done }: Props) {
+export function TaskCard({
+  task,
+  now,
+  onCheck,
+  onDelete,
+  onOpenMemo,
+  onUpdateTitle,
+  onReopen,
+  done,
+}: Props) {
   useLocale();
   const stateLabel: Record<Task['state'], string> = {
     waiting: t('waiting'), due: t('due'), polling: t('polling'),
@@ -49,7 +59,7 @@ export function TaskCard({ task, now, onCheck, onDelete, onOpenMemo, onUpdateTit
               if (e.key === 'Enter') saveTitle();
               if (e.key === 'Escape') { setTitleDraft(task.title); setEditingTitle(false); }
             }}
-            aria-label="编辑任务名称"
+            aria-label={t('editTaskTitle')}
           />
         ) : (
           <button
@@ -59,7 +69,7 @@ export function TaskCard({ task, now, onCheck, onDelete, onOpenMemo, onUpdateTit
             onClick={() => setEditingTitle(true)}
             title={locked ? t('lockedTitle') : t('editTitle')}
           >
-            {locked ? '🔒 任务已加密，输入密码进行本地解密' : task.title}
+            {locked ? t('taskLocked') : task.title}
           </button>
         )}
         {summary && !locked && (
@@ -67,7 +77,7 @@ export function TaskCard({ task, now, onCheck, onDelete, onOpenMemo, onUpdateTit
             type="button"
             className="task-note-summary"
             onClick={() => onOpenMemo?.(task.id)}
-            title="打开备忘录"
+            title={t('openMemo')}
           >
             {summary}
           </button>
@@ -94,22 +104,27 @@ export function TaskCard({ task, now, onCheck, onDelete, onOpenMemo, onUpdateTit
             </button>
           )}
           <button type="button" className="ghost" onClick={() => onCheck(task.id)}>
-            现在查看
+            {t('viewNow')}
           </button>
           <button type="button" className="ghost danger" onClick={() => onDelete(task.id)}>
-            删除
+            {t('delete')}
           </button>
         </div>
       )}
       {done && (
         <div className="task-actions">
-          {onOpenMemo && task.note?.trim() && !locked && (
+          {onOpenMemo && !locked && (
             <button type="button" className="ghost" onClick={() => onOpenMemo(task.id)}>
-              备忘录
+              {task.note?.trim() ? t('memo') : t('writeMemo')}
+            </button>
+          )}
+          {onReopen && (
+            <button type="button" className="ghost" onClick={() => onReopen(task.id)}>
+              {t('reopen')}
             </button>
           )}
           <button type="button" className="ghost danger" onClick={() => onDelete(task.id)}>
-            删除
+            {t('delete')}
           </button>
         </div>
       )}

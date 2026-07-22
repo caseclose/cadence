@@ -10,7 +10,7 @@ interface Props {
 }
 
 export function TaskForm({ onAdd, disabled }: Props) {
-  const locale = useLocale();
+  useLocale();
   const [title, setTitle] = useState('');
   const [when, setWhen] = useState('');
   const [strategy, setStrategy] = useState<Strategy>('converging');
@@ -33,9 +33,12 @@ export function TaskForm({ onAdd, disabled }: Props) {
     if (!when) return null;
     if (!parsed) return t('parseHint');
     if (parsed.kind === 'clock') {
-      return locale === 'en' ? `Reminder at ${formatFireAt(parsed.fireAt)} (about ${formatDuration(parsed.etaMs)} from now)` : `将在 ${formatFireAt(parsed.fireAt)} 提醒你（约 ${formatDuration(parsed.etaMs)} 后）`;
+      return t('reminderAt', {
+        time: formatFireAt(parsed.fireAt),
+        duration: formatDuration(parsed.etaMs),
+      });
     }
-    return locale === 'en' ? `First reminder in ${formatDuration(parsed.etaMs)}` : `将在 ${formatDuration(parsed.etaMs)} 后第一次提醒你`;
+    return t('firstReminderIn', { duration: formatDuration(parsed.etaMs) });
   })();
 
   return (
@@ -61,7 +64,7 @@ export function TaskForm({ onAdd, disabled }: Props) {
           className="field-strategy"
           value={strategy}
           onChange={(e) => setStrategy(e.target.value as Strategy)}
-          aria-label={locale === 'en' ? 'Backoff strategy' : '退避策略'}
+          aria-label={t('backoffStrategy')}
           disabled={disabled}
         >
           <option value="converging">{t('converging')}</option>

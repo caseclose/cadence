@@ -88,6 +88,14 @@ export function schedule(
     case 'done':
       return { ...base, state: 'done', completedAt: now };
 
+    case 'reopen':
+      return {
+        ...base,
+        state: 'waiting',
+        completedAt: undefined,
+        nextFireAt: now + task.etaMs,
+      };
+
     case 'reestimate': {
       // Fresh ETA: go back to waiting and fire again at the new horizon.
       return {

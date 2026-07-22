@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLocale, t } from '../i18n';
 import { Action, Task } from '../scheduler/types';
 import { parseWhen, formatDuration, formatFireAt } from '../util/time';
 import { WhenFormatGuide } from './WhenFormatGuide';
@@ -11,11 +12,8 @@ interface Props {
   onOpenMemo?: (id: string) => void;
 }
 
-/**
- * The core interaction: when a task is due, ask you what happened and turn
- * your answer into a scheduler action (done / not done / no time / reestimate).
- */
 export function ReminderModal({ task, onResolve, onClose, onOpenMemo }: Props) {
+  useLocale();
   const [reWhen, setReWhen] = useState('');
   const parsed = reWhen ? parseWhen(reWhen) : null;
 
@@ -27,20 +25,21 @@ export function ReminderModal({ task, onResolve, onClose, onOpenMemo }: Props) {
   const hint =
     parsed && parsed.etaMs > 0
       ? parsed.kind === 'clock'
-        ? `将在 ${formatFireAt(parsed.fireAt)} 重新提醒（约 ${formatDuration(parsed.etaMs)} 后）`
-        : `将在 ${formatDuration(parsed.etaMs)} 后重新提醒`
+        ? t('reestimateHintClock', {
+            time: formatFireAt(parsed.fireAt),
+            duration: formatDuration(parsed.etaMs),
+          })
+        : t('reestimateHintDuration', { duration: formatDuration(parsed.etaMs) })
       : reWhen
-        ? '无法识别，试试 30m / 2d / 明天14:00'
+        ? t('invalidWhen')
         : null;
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-title">该看一下「{task.title}」了</div>
+        <div className="modal-title">{t('reminderTitle', { title: task.title })}</div>
         <div className="modal-sub">
-          {task.strategy === 'converging'
-            ? '按预计现在应该差不多完成了。当前状态如何？'
-            : '轮到检查这个挂起任务了。有进展吗？'}
+          {task.strategy === 'converging' ? t('convergingPrompt') : t('pollingPrompt')}
         </div>
 
         {task.note?.trim() && (
@@ -51,29 +50,29 @@ export function ReminderModal({ task, onResolve, onClose, onOpenMemo }: Props) {
               onClose();
               onOpenMemo?.(task.id);
             }}
-            title="点击打开备忘录编辑"
+            title={t('openMemoEdit')}
           >
-            <div className="modal-memo-label">备忘录</div>
+            <div className="modal-memo-label">{t('memo')}</div>
             <MarkdownView source={task.note} className="modal-memo-body" />
-            <div className="modal-memo-edit-hint">点击备忘录开始编辑</div>
+            <div className="modal-memo-edit-hint">{t('clickMemoEdit')}</div>
           </button>
         )}
 
         <div className="modal-actions">
           <button type="button" className="primary" onClick={() => act({ type: 'done' })}>
-            已完成 / 收工
+            {t('doneAction')}
           </button>
           <button type="button" onClick={() => act({ type: 'checked_not_done' })}>
-            看了，还没好（稍后再提醒）
+            {t('notDone')}
           </button>
           <button type="button" onClick={() => act({ type: 'no_resources' })}>
-            现在没空看（小睡一会）
+            {t('noResources')}
           </button>
         </div>
 
         <div className="modal-reestimate">
           <input
-            placeholder="重估：30m / 14:00 / 下午3点"
+            placeholder={t('reestimatePlaceholder')}
             value={reWhen}
             onChange={(e) => setReWhen(e.target.value)}
           />
@@ -82,7 +81,7 @@ export function ReminderModal({ task, onResolve, onClose, onOpenMemo }: Props) {
             disabled={!parsed || parsed.etaMs <= 0}
             onClick={() => parsed && act({ type: 'reestimate', etaMs: parsed.etaMs })}
           >
-            重估
+            {t('reestimate')}
           </button>
         </div>
         {hint && <div className="hint">{hint}</div>}

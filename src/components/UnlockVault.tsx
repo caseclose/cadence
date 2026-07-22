@@ -25,14 +25,20 @@ export function UnlockVault() {
     <div className="vault-card card">
       <h3 className="vault-title">🔐 {t('decryptTitle')}</h3>
       <p className="vault-copy">
-        你的任务在云端以<strong>密文</strong>存储。私钥由t('loginPassword')保护。t('unlock')后本机可免密约
-        <strong>6 小时</strong>（刷新页面仍保持t('unlock')）；过期或退出登录后需再输入密码。
+        {t('vaultCopy1')}
+        <strong>{t('vaultCopyCipher')}</strong>
+        {t('vaultCopy2')}
+        {t('loginPassword')}
+        {t('vaultCopy3')} {t('unlock')}
+        {t('vaultCopy4')}
+        <strong>{t('vaultHours')}</strong>
+        {t('vaultCopy5')}
       </p>
       <div className="vault-row">
         <input
           className="auth-field"
           type="password"
-          placeholder="t('loginPassword')"
+          placeholder={t('loginPassword')}
           autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -41,7 +47,7 @@ export function UnlockVault() {
           }}
         />
         <button type="button" className="btn-sm btn-primary" disabled={!canSubmit} onClick={() => void submit()}>
-          t('unlock')
+          {t('unlock')}
         </button>
       </div>
       {msg && <p className="auth-msg">{msg}</p>}

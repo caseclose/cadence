@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { supabase } from '../store/supabase';
 
 export type WebhookProvider = 'feishu' | 'wecom' | 'dingtalk';
@@ -14,26 +15,10 @@ export interface NotificationWebhook {
   updated_at: number;
 }
 
-export const WEBHOOK_PROVIDERS: {
-  id: WebhookProvider;
-  label: string;
-  hint: string;
-}[] = [
-  {
-    id: 'feishu',
-    label: '飞书',
-    hint: '群设置 → 机器人 → 自定义机器人 → Webhook 地址；若开启签名校验请填密钥',
-  },
-  {
-    id: 'wecom',
-    label: '企业微信',
-    hint: '群机器人 → Webhook 地址（一般无需密钥）',
-  },
-  {
-    id: 'dingtalk',
-    label: '钉钉',
-    hint: '群设置 → 智能群助手 → 自定义机器人；安全设置若选「加签」请填 SEC；若选关键词请包含 Cadence',
-  },
+export const WEBHOOK_PROVIDERS: { id: WebhookProvider }[] = [
+  { id: 'feishu' },
+  { id: 'wecom' },
+  { id: 'dingtalk' },
 ];
 
 export async function listWebhooks(userId: string): Promise<NotificationWebhook[]> {
@@ -58,9 +43,9 @@ export async function upsertWebhook(input: {
   enabled?: boolean;
   includeContent?: boolean;
 }): Promise<string | null> {
-  if (!supabase) return '未配置云同步';
+  if (!supabase) return t('errCloudNotConfigured');
   const url = input.url.trim();
-  if (!url.startsWith('https://')) return 'Webhook 地址须以 https:// 开头';
+  if (!url.startsWith('https://')) return t('errWebhookHttps');
 
   const now = Date.now();
   const { data: existing } = await supabase
@@ -103,7 +88,7 @@ export async function deleteWebhook(
   userId: string,
   provider: WebhookProvider,
 ): Promise<string | null> {
-  if (!supabase) return '未配置云同步';
+  if (!supabase) return t('errCloudNotConfigured');
   const { error } = await supabase
     .from('notification_webhooks')
     .delete()
@@ -118,7 +103,7 @@ export async function setWebhookEnabled(
   provider: WebhookProvider,
   enabled: boolean,
 ): Promise<string | null> {
-  if (!supabase) return '未配置云同步';
+  if (!supabase) return t('errCloudNotConfigured');
   const { error } = await supabase
     .from('notification_webhooks')
     .update({ enabled, updated_at: Date.now() })
@@ -130,12 +115,11 @@ export async function setWebhookEnabled(
 
 /** Ask Edge Function to POST a test message to this user's saved webhooks. */
 export async function testSavedWebhooks(): Promise<string | null> {
-  if (!supabase) return '未配置云同步';
+  if (!supabase) return t('errCloudNotConfigured');
   const { data, error } = await supabase.functions.invoke('push-due', {
     body: { action: 'test-webhook' },
   });
   if (error) {
-    // functions.invoke wraps non-2xx; try to surface server message
     const ctx = (error as { context?: Response }).context;
     if (ctx) {
       try {
@@ -147,19 +131,18 @@ export async function testSavedWebhooks(): Promise<string | null> {
         /* ignore */
       }
     }
-    return error.message || '测试发送失败';
+    return error.message || t('errWebhookTestFailed');
   }
   const payload = data as {
     ok?: boolean;
     error?: string;
     results?: { provider: string; ok: boolean; detail?: string }[];
   } | null;
-  if (!payload) return '测试无响应';
+  if (!payload) return t('errWebhookNoResponse');
   if (payload.error) return payload.error;
   if (payload.ok) return null;
   const fail = payload.results?.find((r) => !r.ok);
   return fail?.detail
     ? `${fail.provider}: ${fail.detail}`
-    : '测试发送失败（请检查签名密钥是否与飞书机器人一致；未开签名校验请留空密钥）';
+    : t('errWebhookTestSignHint');
 }
-

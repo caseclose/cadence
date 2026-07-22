@@ -1,3 +1,5 @@
+import { getLocale, t, weekdayLabels } from '../i18n';
+
 export const MINUTE = 60_000;
 export const HOUR = 60 * MINUTE;
 export const DAY = 24 * HOUR;
@@ -28,7 +30,7 @@ export function formatClock(ms: number): string {
 
 /** Fire time with day context when it is not today. */
 export function formatFireAt(fireAt: number, now = Date.now()): string {
-  const t = new Date(fireAt);
+  const at = new Date(fireAt);
   const n = new Date(now);
   const clock = formatClock(fireAt);
 
@@ -37,22 +39,29 @@ export function formatFireAt(fireAt: number, now = Date.now()): string {
     x.setHours(0, 0, 0, 0);
     return x.getTime();
   };
-  const dayDiff = Math.round((startOf(t) - startOf(n)) / DAY);
+  const dayDiff = Math.round((startOf(at) - startOf(n)) / DAY);
 
   if (dayDiff === 0) return clock;
-  if (dayDiff === 1) return `明天 ${clock}`;
-  if (dayDiff === 2) return `后天 ${clock}`;
+  if (dayDiff === 1) return `${t('tomorrow')} ${clock}`;
+  if (dayDiff === 2) return `${t('dayAfterTomorrow')} ${clock}`;
   if (dayDiff >= 3 && dayDiff <= 6) {
-    return `${WEEKDAY_LABELS[t.getDay()]} ${clock}`;
+    return `${weekdayLabels()[at.getDay()]} ${clock}`;
   }
-  return `${t.getMonth() + 1}月${t.getDate()}日 ${clock}`;
+  if (getLocale() === 'en') {
+    return `${at.getMonth() + 1}/${at.getDate()} ${clock}`;
+  }
+  return `${at.getMonth() + 1}月${at.getDate()}日 ${clock}`;
 }
 
-/** Relative time from now, e.g. "3m 后" or "已过 5m". */
+/** Relative time from now, e.g. "3m left" or "overdue by 5m". */
 export function formatRelative(target: number, now: number): string {
   const diff = target - now;
-  if (diff >= 0) return `${formatDuration(diff)}后`;
-  return `已过 ${formatDuration(-diff)}`;
+  if (diff >= 0) {
+    return getLocale() === 'en'
+      ? `${formatDuration(diff)} ${t('timeSuffix')}`
+      : `${formatDuration(diff)}${t('timeSuffix')}`;
+  }
+  return `${t('timeOverdue')} ${formatDuration(-diff)}`;
 }
 
 export interface ParsedWhen {
@@ -324,8 +333,6 @@ const WEEKDAY_MAP: Record<string, number> = {
   五: 5,
   六: 6,
 };
-
-const WEEKDAY_LABELS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
 interface WeekdayParts {
   dow: number;

@@ -1,9 +1,9 @@
-import { useLanguage } from '../i18n';
+import { useLanguage, t } from '../i18n';
 
 export function LanguageToggle() {
   const { locale, setLocale } = useLanguage();
   return (
-    <div className="language-toggle" role="group" aria-label={locale === 'zh' ? '语言' : 'Language'}>
+    <div className="language-toggle" role="group" aria-label={t('language')}>
       <button
         type="button"
         className={locale === 'zh' ? 'is-active' : ''}

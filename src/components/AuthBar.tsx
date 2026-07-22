@@ -9,7 +9,7 @@ import {
 } from '../notify/push';
 
 export function AuthBar() {
-  const locale = useLocale();
+  useLocale();
   const {
     user,
     cloudEnabled,
@@ -79,7 +79,7 @@ export function AuthBar() {
             type="button"
             className="btn-sm btn-ghost"
             disabled={pushBusy}
-            title={pushOn ? (locale === 'en' ? 'Disable background push on this device' : '关闭本设备的后台推送') : (locale === 'en' ? 'Works when the page is closed or locked' : '开启后台推送（关页/锁屏也可提醒）。大陆 Chrome 可能需 VPN；国内更推荐「提醒通道」')}
+            title={pushOn ? t('disablePushTitle') : t('enablePushTitle')}
             onClick={() => void togglePush()}
           >
             {pushBusy ? '…' : pushOn ? t('pushEnabled') : t('enablePush')}
@@ -93,7 +93,7 @@ export function AuthBar() {
             className="auth-msg auth-msg-inline auth-msg-dismiss"
             role="button"
             tabIndex={0}
-            title={locale === 'en' ? 'Click to dismiss' : '点击关闭'}
+            title={t('clickDismiss')}
             onClick={() => setPushMsg(null)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {

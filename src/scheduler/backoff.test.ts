@@ -120,4 +120,18 @@ describe('reestimate and done', () => {
     expect(t.state).toBe('done');
     expect(t.completedAt).toBe(now + MIN);
   });
+
+  it('reopen restores a completed task to waiting', () => {
+    const now = 100;
+    let t = createTask(
+      { id: 'a', title: 'train', strategy: 'converging', etaMs: MIN, note: 'ctx' },
+      now,
+    );
+    t = schedule(t, { type: 'done' }, now + MIN, DEFAULT_BACKOFF, noJitter);
+    t = schedule(t, { type: 'reopen' }, now + 2 * MIN, DEFAULT_BACKOFF, noJitter);
+    expect(t.state).toBe('waiting');
+    expect(t.completedAt).toBeUndefined();
+    expect(t.nextFireAt).toBe(now + 2 * MIN + MIN);
+    expect(t.note).toBe('ctx');
+  });
 });

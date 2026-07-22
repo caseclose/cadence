@@ -13,6 +13,7 @@ import {
 } from '../crypto/keyring';
 import { createTask, schedule } from '../scheduler/backoff';
 import { Action, BackoffConfig, DEFAULT_BACKOFF, Strategy, Task } from '../scheduler/types';
+import { t } from '../i18n';
 import { supabase, isCloudEnabled } from './supabase';
 import { rowToTask, taskToRow, TaskRow } from './mapping';
 import { mapAuthError } from './authErrors';
@@ -113,6 +114,7 @@ interface StoreState {
     priority?: number;
   }) => void;
   applyAction: (id: string, action: Action) => void;
+  reopenTask: (id: string) => void;
   updateTaskNote: (id: string, note: string) => void;
   updateTaskTitle: (id: string, title: string) => void;
   syncWebhookContent: () => Promise<void>;
@@ -252,7 +254,7 @@ async function syncRemoteTasks(
 }
 
 async function ensureE2EEWithPassword(user: User, username: string, password: string): Promise<string | null> {
-  if (!supabase) return '未配置云同步';
+  if (!supabase) return t('errCloudNotConfigured');
 
   const work = (async (): Promise<string | null> => {
     try {
@@ -268,7 +270,7 @@ async function ensureE2EEWithPassword(user: User, username: string, password: st
       await persistKeyringSession(user.id);
       return null;
     } catch {
-      return '密码错误，无法解锁端到端加密';
+      return t('errWrongPassword');
     }
   })();
 
@@ -389,6 +391,10 @@ export const useStore = create<StoreState>((set, get) => ({
     if (uid && updated) void upsertRemote(updated, uid);
   },
 
+  reopenTask: (id) => {
+    get().applyAction(id, { type: 'reopen' });
+  },
+
   updateTaskNote: (id, note) => {
     if (get().e2eeLocked) return;
     const trimmed = note.trim();
@@ -447,14 +453,14 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   signInWithUsername: async (username, password) => {
-    if (!supabase) return '未配置云同步';
-    if (!validateUsername(username)) return '用户名需 2–20 位（字母、数字、下划线、中文）';
+    if (!supabase) return t('errCloudNotConfigured');
+    if (!validateUsername(username)) return t('errInvalidUsername');
     const { data, error } = await supabase.auth.signInWithPassword({
       email: usernameToEmail(username),
       password,
     });
     if (error) return mapAuthError(error.message);
-    if (!data.user) return '登录失败';
+    if (!data.user) return t('errSignInFailed');
 
     const e2eeErr = await ensureE2EEWithPassword(data.user, username, password);
     if (e2eeErr) return e2eeErr;
@@ -466,8 +472,8 @@ export const useStore = create<StoreState>((set, get) => ({
   },
 
   signUpWithUsername: async (username, password) => {
-    if (!supabase) return '未配置云同步';
-    if (!validateUsername(username)) return '用户名需 2–20 位（字母、数字、下划线、中文）';
+    if (!supabase) return t('errCloudNotConfigured');
+    if (!validateUsername(username)) return t('errInvalidUsername');
     const { data, error } = await supabase.auth.signUp({
       email: usernameToEmail(username),
       password,
@@ -475,7 +481,7 @@ export const useStore = create<StoreState>((set, get) => ({
     });
     if (error) return mapAuthError(error.message);
     if (!data.session || !data.user) {
-      return '注册失败：请在 Supabase 关闭 Confirm email（Authentication → Email），无需邮件即可登录。';
+      return t('errSignUpFailed');
     }
 
     const e2eeErr = await ensureE2EEWithPassword(data.user, username, password);
@@ -489,10 +495,10 @@ export const useStore = create<StoreState>((set, get) => ({
 
   unlockVault: async (password) => {
     const user = get().user;
-    if (!user) return '请先登录';
+    if (!user) return t('errSignInFirst');
     const e2eeErr = await ensureE2EEWithPassword(
       user,
-      (user.user_metadata?.username as string) ?? '用户',
+      (user.user_metadata?.username as string) ?? t('defaultUser'),
       password,
     );
     if (e2eeErr) return e2eeErr;
@@ -504,7 +510,7 @@ export const useStore = create<StoreState>((set, get) => ({
 
   enablePush: async () => {
     const uid = get().user?.id;
-    if (!uid) return '请先登录';
+    if (!uid) return t('errSignInFirst');
     return subscribeToPush(uid);
   },
 
@@ -513,7 +519,7 @@ export const useStore = create<StoreState>((set, get) => ({
       await unsubscribeFromPush();
       return null;
     } catch (err) {
-      return err instanceof Error ? err.message : '关闭推送失败';
+      return err instanceof Error ? err.message : t('errDisablePushFailed');
     }
   },
 

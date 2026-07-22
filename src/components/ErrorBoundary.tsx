@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { t } from '../i18n';
 
 interface Props {
   children: ReactNode;
@@ -37,10 +38,10 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.error) {
       return (
         <div className="error-fallback">
-          <h1>页面加载出错</h1>
+          <h1>{t('errPageLoad')}</h1>
           <p>{this.state.error.message}</p>
           <button type="button" className="btn-primary" onClick={this.reset}>
-            重置本地任务缓存并刷新
+            {t('errResetCache')}
           </button>
         </div>
       );

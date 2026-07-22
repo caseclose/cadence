@@ -1,7 +1,8 @@
 import { useState } from 'react';
+import { useLocale, t } from '../i18n';
 
-/** Collapsible cheat sheet for the when/ETA input field. */
 export function WhenFormatGuide() {
+  useLocale();
   const [open, setOpen] = useState(false);
 
   return (
@@ -12,31 +13,29 @@ export function WhenFormatGuide() {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
       >
-        {open ? '收起格式说明' : '格式说明'}
+        {open ? t('formatGuideCollapse') : t('formatGuideExpand')}
       </button>
       {open && (
         <div className="format-guide-body">
-          <p className="format-guide-lead">
-            「多久后」和「几点/哪天几点」等价，都会自动换算成第一次提醒时间。
-          </p>
+          <p className="format-guide-lead">{t('formatGuideLead')}</p>
           <div className="format-guide-grid">
             <section>
-              <h4>相对时长</h4>
+              <h4>{t('formatRelativeDuration')}</h4>
               <ul>
                 <li><code>1h</code> · <code>90m</code> · <code>2d</code></li>
                 <li><code>10分钟</code> · <code>1小时</code> · <code>2天</code></li>
-                <li><code>半小时</code> · <code>45</code>（纯数字 = 分钟）</li>
+                <li><code>半小时</code> · <code>45</code>{t('formatPureNumber')}</li>
               </ul>
             </section>
             <section>
-              <h4>时刻 / 相对日期</h4>
+              <h4>{t('formatMomentDate')}</h4>
               <ul>
                 <li><code>14:00</code> · <code>下午3点</code></li>
                 <li><code>明天上午10点</code> · <code>后天14:00</code></li>
               </ul>
             </section>
             <section>
-              <h4>星期</h4>
+              <h4>{t('formatWeekday')}</h4>
               <ul>
                 <li><code>周五下午2点</code></li>
                 <li><code>下周五14:00</code></li>
@@ -44,7 +43,7 @@ export function WhenFormatGuide() {
               </ul>
             </section>
             <section>
-              <h4>指定日期</h4>
+              <h4>{t('formatAbsoluteDate')}</h4>
               <ul>
                 <li><code>7月22日上午10点</code></li>
                 <li><code>7/22 10:00</code></li>
@@ -52,10 +51,7 @@ export function WhenFormatGuide() {
               </ul>
             </section>
           </div>
-          <p className="format-guide-note">
-            仅写日期不写时间 → 默认 <strong>09:00</strong>。指定日期若已过且无年份 → 自动算到<strong>明年</strong>。
-            预览示例：<strong>7月22日 10:00</strong>。
-          </p>
+          <p className="format-guide-note">{t('formatGuideNote')}</p>
         </div>
       )}
     </div>

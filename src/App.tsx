@@ -29,6 +29,7 @@ export default function App() {
     updateTaskNote,
     updateTaskTitle,
     deleteTask,
+    reopenTask,
     exportJson,
     importJson,
   } = useStore();
@@ -95,14 +96,14 @@ export default function App() {
   };
 
   const onImport = () => {
-    const json = window.prompt('粘贴导出的 JSON 以导入');
+    const json = window.prompt(t('importPrompt'));
     if (json) importJson(json);
   };
 
   const onExport = () => {
     const json = exportJson();
     void navigator.clipboard?.writeText(json);
-    window.alert('已复制备份 JSON 到剪贴板');
+    window.alert(t('exportCopied'));
   };
 
   return (
@@ -160,7 +161,7 @@ export default function App() {
             <div className="empty">{t('loginToView')}</div>
           )}
           {ready && !canManageTasks && !user && (
-            <div className="empty">登录后查看和同步你的任务。</div>
+            <div className="empty">{t('loginToView')}</div>
           )}
           {ready && canManageTasks && activeTasks.length === 0 && (
             <div className="empty">{t('empty')}</div>
@@ -196,6 +197,7 @@ export default function App() {
                   onDelete={deleteTask}
                   onOpenMemo={setMemoId}
                   onUpdateTitle={updateTaskTitle}
+                  onReopen={reopenTask}
                 />
               ))}
             </div>

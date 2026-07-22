@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { supabase } from '../store/supabase';
 
 /** Convert a URL-safe base64 VAPID public key to Uint8Array for pushManager.subscribe. */
@@ -39,12 +40,12 @@ async function getRegistration(): Promise<ServiceWorkerRegistration | null> {
 
 /** Persist the current PushSubscription to Supabase for the signed-in user. */
 async function upsertSubscriptionRow(sub: PushSubscription, userId: string): Promise<string | null> {
-  if (!supabase) return '未配置云同步';
+  if (!supabase) return t('errCloudNotConfigured');
   const json = sub.toJSON();
   const endpoint = json.endpoint;
   const p256dh = json.keys?.p256dh;
   const auth = json.keys?.auth;
-  if (!endpoint || !p256dh || !auth) return '推送订阅不完整';
+  if (!endpoint || !p256dh || !auth) return t('errPushIncomplete');
 
   const { error } = await supabase.from('push_subscriptions').upsert(
     {
@@ -69,44 +70,38 @@ async function deleteSubscriptionRow(endpoint: string): Promise<void> {
 /** True when Chrome cannot reach Google FCM (common in mainland China without VPN). */
 export function isPushServiceUnavailableError(message: string): boolean {
   const m = message.toLowerCase();
-  // e.g. "Registration failed - push service unavailable" / "push service not available"
   if (m.includes('push service') || m.includes('pushservice')) return true;
   return m.includes('push') && (m.includes('not available') || m.includes('unavailable'));
 }
 
-/** Map raw PushManager errors to short Chinese copy for the AuthBar. */
 export function formatPushSubscribeError(err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err);
   if (isPushServiceUnavailableError(msg)) {
-    return '网页推送不可用（大陆 Chrome 常无法连接 Google 推送）。可开 VPN 后重试，或改用「提醒通道」配置飞书/企微/钉钉。';
+    return t('errPushUnavailable');
   }
-  return `订阅推送失败：${msg || '未知错误'}`;
+  return t('errPushSubscribeFailed', { msg: msg || t('errPushUnknown') });
 }
 
-/**
- * Request notification permission (must be called from a user gesture on iOS),
- * subscribe to Web Push, and upsert the subscription for `userId`.
- */
 export async function subscribeToPush(userId: string): Promise<string | null> {
   if (!isPushSupported()) {
-    return '当前浏览器不支持推送（iOS 需「添加到主屏幕」后的 PWA）';
+    return t('errPushNotSupported');
   }
   const publicKey = vapidPublicKey();
   if (!publicKey) {
-    return '未配置 VITE_VAPID_PUBLIC_KEY，无法开启推送';
+    return t('errPushNoVapid');
   }
-  if (!supabase) return '未配置云同步';
+  if (!supabase) return t('errCloudNotConfigured');
 
   let permission = Notification.permission;
   if (permission === 'default') {
     permission = await Notification.requestPermission();
   }
   if (permission !== 'granted') {
-    return '未授予通知权限';
+    return t('errPushPermissionDenied');
   }
 
   const reg = await getRegistration();
-  if (!reg) return 'Service Worker 尚未就绪，请刷新后再试';
+  if (!reg) return t('errPushSwNotReady');
 
   let sub = await reg.pushManager.getSubscription();
   if (!sub) {
