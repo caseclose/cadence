@@ -10,6 +10,7 @@ create table if not exists public.tasks (
   strategy text not null default 'converging'
     check (strategy in ('converging', 'exponential')),
   eta_ms bigint not null,
+  initial_eta_ms bigint,
   state text not null default 'waiting'
     check (state in ('waiting', 'due', 'polling', 'snoozed', 'done')),
   attempts int not null default 0,
@@ -130,3 +131,22 @@ create policy "notification webhooks are private"
 -- For a brand-new install you can instead run migration_push.sql after deploying
 -- the Edge Function, which enables the cron job with your project URL.
 -- ---------------------------------------------------------------------------
+
+
+-- E2EE task templates and task events used by client-side analytics.
+create table if not exists public.task_templates (
+  id uuid primary key, user_id uuid not null references auth.users(id) on delete cascade,
+  enc text not null, created_at bigint not null, updated_at bigint not null
+);
+create table if not exists public.task_events (
+  id uuid primary key, user_id uuid not null references auth.users(id) on delete cascade,
+  task_id uuid not null references public.tasks(id) on delete cascade,
+  enc text not null, created_at bigint not null
+);
+create index if not exists task_templates_user_idx on public.task_templates(user_id);
+create index if not exists task_events_task_idx on public.task_events(task_id, created_at);
+alter table public.task_templates enable row level security;
+alter table public.task_events enable row level security;
+grant select, insert, update, delete on public.task_templates, public.task_events to authenticated, service_role;
+create policy "templates are private" on public.task_templates for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "events are private" on public.task_events for all to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);

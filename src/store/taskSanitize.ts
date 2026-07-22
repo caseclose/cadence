@@ -38,15 +38,13 @@ export function sanitizeTasks(data: unknown): Task[] {
     out.push({
       ...item,
       etaMs: asNum(item.etaMs),
+      ...(item.initialEtaMs === undefined ? {} : { initialEtaMs: asNum(item.initialEtaMs, asNum(item.etaMs)) }),
       attempts: asNum(item.attempts),
       nextFireAt: asNum(item.nextFireAt),
       priority: asNum(item.priority),
       createdAt: asNum(item.createdAt),
       updatedAt: asNum(item.updatedAt),
-      completedAt:
-        item.completedAt === undefined || item.completedAt === null
-          ? undefined
-          : asNum(item.completedAt),
+      ...(item.completedAt === undefined || item.completedAt === null ? {} : { completedAt: asNum(item.completedAt) }),
     });
   }
   return out;

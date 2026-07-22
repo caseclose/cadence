@@ -21,6 +21,8 @@ export interface Task {
   priority: number;
   createdAt: number;
   updatedAt: number;
+  /** Original ETA, preserved when the task is re-estimated. */
+  initialEtaMs?: number;
   /** Set once when the task is completed. */
   completedAt?: number;
 }
@@ -29,9 +31,32 @@ export interface Task {
 export type Action =
   | { type: 'checked_not_done' } // looked, still running -> back off
   | { type: 'no_resources' } // too busy to look -> short snooze
+  | { type: 'snooze'; durationMs: number } // explicit manual snooze
   | { type: 'reestimate'; etaMs: number } // give a fresh ETA -> back to waiting
   | { type: 'reopen' } // undo completion -> back to waiting
   | { type: 'done' }; // finished -> dequeue
+
+export type TaskEventType = 'created' | 'done' | 'checked_not_done' | 'snooze' | 'reestimate' | 'reopen';
+
+export interface TaskTemplate {
+  id: string;
+  title: string;
+  note?: string;
+  strategy: Strategy;
+  etaMs: number;
+  priority?: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface TaskEvent {
+  id: string;
+  taskId: string;
+  type: TaskEventType;
+  at: number;
+  etaMs?: number;
+  durationMs?: number;
+}
 
 export interface BackoffConfig {
   /** Floor for any interval, prevents spamming. */

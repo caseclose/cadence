@@ -22,6 +22,13 @@ export function ReminderModal({ task, onResolve, onClose, onOpenMemo }: Props) {
     onClose();
   };
 
+  const tomorrowMorning = () => {
+    const next = new Date();
+    next.setDate(next.getDate() + 1);
+    next.setHours(9, 0, 0, 0);
+    return Math.max(5 * 60_000, next.getTime() - Date.now());
+  };
+
   const hint =
     parsed && parsed.etaMs > 0
       ? parsed.kind === 'clock'
@@ -68,6 +75,13 @@ export function ReminderModal({ task, onResolve, onClose, onOpenMemo }: Props) {
           <button type="button" onClick={() => act({ type: 'no_resources' })}>
             {t('noResources')}
           </button>
+        </div>
+
+        <div className="modal-snooze">
+          <span>{t('quickSnooze')}</span>
+          <button type="button" onClick={() => act({ type: 'snooze', durationMs: 10 * 60_000 })}>{t('snooze10m')}</button>
+          <button type="button" onClick={() => act({ type: 'snooze', durationMs: 60 * 60_000 })}>{t('snooze1h')}</button>
+          <button type="button" onClick={() => act({ type: 'snooze', durationMs: tomorrowMorning() })}>{t('snoozeTomorrow')}</button>
         </div>
 
         <div className="modal-reestimate">

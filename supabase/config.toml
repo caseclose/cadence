@@ -3,6 +3,10 @@
 
 [functions.push-due]
 verify_jwt = false
-# Cron / pg_net calls with the service_role Bearer token; verify_jwt=false
-# lets the function accept that header without requiring an end-user JWT.
-# The function itself uses SERVICE_ROLE_KEY for DB access.
+# Browser test calls authenticate with the user JWT; scheduled calls use the
+# independent CADENCE_CRON_SECRET checked inside the function.
+
+
+# Called only by pg_cron with the independent secret verified in the function.
+[functions.daily-digest]
+verify_jwt = false

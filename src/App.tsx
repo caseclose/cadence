@@ -11,9 +11,11 @@ import { ThemeToggle } from './components/ThemeToggle';
 import { ProjectIntro } from './components/ProjectIntro';
 import { UnlockVault } from './components/UnlockVault';
 import { WebhookSettings } from './components/WebhookSettings';
+import { DigestSettings } from './components/DigestSettings';
 import { MemoModal } from './components/MemoModal';
 import { LanguageToggle } from './components/LanguageToggle';
 import { useLocale, t } from './i18n';
+import { summarizeTasks } from './util/stats';
 
 export default function App() {
   useLocale();
@@ -39,6 +41,7 @@ export default function App() {
   const [now, setNow] = useState(Date.now());
   const [queue, setQueue] = useState<string[]>([]); // ids of due tasks awaiting your response
   const [memoId, setMemoId] = useState<string | null>(null);
+  const { events, templates, saveTemplate, deleteTemplate, addFromTemplate } = useStore();
   const [notifPerm, setNotifPerm] = useState<NotificationPermission>(
     typeof Notification !== 'undefined' ? Notification.permission : 'denied',
   );
@@ -78,6 +81,9 @@ export default function App() {
     [tasks],
   );
   const doneTasks = useMemo(() => tasks.filter((t) => t.state === 'done'), [tasks]);
+  const recentDoneTasks = useMemo(() => doneTasks.filter((t) => t.completedAt && now - t.completedAt <= 7 * 24 * 60 * 60_000), [doneTasks, now]);
+  const stats = useMemo(() => summarizeTasks(tasks, events, now - 30 * 24 * 60 * 60_000), [tasks, events, now]);
+  const archivedTasks = useMemo(() => doneTasks.filter((t) => !t.completedAt || now - t.completedAt > 7 * 24 * 60 * 60_000), [doneTasks, now]);
 
   const currentDue = useMemo(
     () => tasks.find((t) => t.id === queue[0]) ?? null,
@@ -105,6 +111,12 @@ export default function App() {
     void navigator.clipboard?.writeText(json);
     window.alert(t('exportCopied'));
   };
+
+  useEffect(() => {
+    const due = activeTasks.filter((task) => task.nextFireAt <= now).length;
+    document.title = due ? `(${due}) Cadence` : activeTasks.length ? `(${Math.max(0, Math.ceil((activeTasks[0].nextFireAt - now) / 60_000))}m) Cadence` : 'Cadence';
+    return () => { document.title = 'Cadence'; };
+  }, [activeTasks, now]);
 
   return (
     <div className="app">
@@ -136,7 +148,7 @@ export default function App() {
       <main className="main">
         <ProjectIntro />
         {user && e2eeLocked && <UnlockVault />}
-        {user && !e2eeLocked && <WebhookSettings />}
+        {user && !e2eeLocked && <><WebhookSettings /><DigestSettings /></>}
         <TaskForm onAdd={addTask} disabled={!canManageTasks} />
 
         <section>
@@ -176,29 +188,38 @@ export default function App() {
                 onDelete={deleteTask}
                 onOpenMemo={setMemoId}
                 onUpdateTitle={updateTaskTitle}
+                onSaveTemplate={(task) => saveTemplate({ title: task.title, note: task.note, strategy: task.strategy, etaMs: task.etaMs, priority: task.priority })}
               />
             ))}
           </div>
         </section>
 
-        {doneTasks.length > 0 && (
+        {recentDoneTasks.length > 0 && (
           <section>
-            <div className="section-head">
-              <h2>{t('completed')}</h2>
-            </div>
+            <div className="section-head"><h2>{t('completedRecent')}</h2></div>
             <div className="task-list">
-              {doneTasks.map((t) => (
-                <TaskCard
-                  key={t.id}
-                  task={t}
-                  now={now}
-                  done
-                  onCheck={() => {}}
-                  onDelete={deleteTask}
-                  onOpenMemo={setMemoId}
-                  onUpdateTitle={updateTaskTitle}
-                  onReopen={reopenTask}
-                />
+              {recentDoneTasks.map((task) => (
+                <TaskCard key={task.id} task={task} now={now} done onCheck={() => {}} onDelete={deleteTask} onOpenMemo={setMemoId} onUpdateTitle={updateTaskTitle} onReopen={reopenTask} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        <section className="stats-panel">
+          <div className="section-head"><h2>{t('stats')}</h2></div>
+          <div className="task-meta"><span>{t('completed')}: {stats.completed}</span><span>{t('etaRatio')}: {stats.medianRatio === null ? '-' : `${Math.round(stats.medianRatio * 100)}%`}</span><span>{t('p90')}: {stats.p90Ratio === null ? '-' : `${Math.round(stats.p90Ratio * 100)}%`}</span></div>
+        </section>
+
+        {templates.length > 0 && (
+          <section><div className="section-head"><h2>{t('templates')}</h2></div><div className="task-list">{templates.map((template) => <div className="card task" key={template.id}><div className="task-main"><strong>{template.title}</strong></div><div className="task-actions"><button type="button" className="ghost" onClick={() => addFromTemplate(template.id)}>{t('useTemplate')}</button><button type="button" className="ghost danger" onClick={() => deleteTemplate(template.id)}>{t('delete')}</button></div></div>)}</div></section>
+        )}
+
+        {archivedTasks.length > 0 && (
+          <section>
+            <div className="section-head"><h2>{t('archived')}</h2></div>
+            <div className="task-list">
+              {archivedTasks.map((task) => (
+                <TaskCard key={task.id} task={task} now={now} done onCheck={() => {}} onDelete={deleteTask} onOpenMemo={setMemoId} onUpdateTitle={updateTaskTitle} onReopen={reopenTask} />
               ))}
             </div>
           </section>

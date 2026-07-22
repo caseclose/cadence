@@ -56,6 +56,13 @@
 - 不要在服务端实现「解密接口」——那会破坏 E2EE 保证
 - 算法与实现见 [`src/crypto/e2ee.ts`](../src/crypto/e2ee.ts)、[`src/crypto/keyring.ts`](../src/crypto/keyring.ts)
 
+
+## CLI 与分析数据
+
+- CLI 使用与浏览器相同的 E2EE 格式：`CADENCE_PASSWORD` 只在本机进程内用于解锁 DEK，不上传到 API，也不落盘。
+- 模板和任务事件同样以 `enc` 字段上传；ETA 统计在客户端解密后计算。
+- 每日摘要为刻意保留的元数据功能：服务端仅查询任务的 `state` 和 `next_fire_at` 并发送数量，不能读取标题或备忘录。
+
 ## 局限
 
 - 密码即密钥：密码太弱可被离线暴力尝试 metadata 中的私钥封装（已用 PBKDF2 减缓）

@@ -3,6 +3,7 @@ import { useLocale, t } from '../i18n';
 import { Strategy } from '../scheduler/types';
 import { parseWhen, formatDuration, formatFireAt } from '../util/time';
 import { WhenFormatGuide } from './WhenFormatGuide';
+import { parseTaskPrefill } from '../util/taskPrefill';
 
 interface Props {
   onAdd: (input: { title: string; note?: string; strategy: Strategy; etaMs: number }) => void;
@@ -11,10 +12,11 @@ interface Props {
 
 export function TaskForm({ onAdd, disabled }: Props) {
   useLocale();
-  const [title, setTitle] = useState('');
-  const [when, setWhen] = useState('');
-  const [strategy, setStrategy] = useState<Strategy>('converging');
-  const [note, setNote] = useState('');
+  const prefill = parseTaskPrefill(typeof window === 'undefined' ? '' : window.location.search);
+  const [title, setTitle] = useState(prefill.title ?? '');
+  const [when, setWhen] = useState(prefill.when ?? '');
+  const [strategy, setStrategy] = useState<Strategy>(prefill.strategy ?? 'converging');
+  const [note, setNote] = useState(prefill.note ?? '');
 
   const parsed = when ? parseWhen(when) : null;
   const canSubmit = !disabled && title.trim().length > 0 && parsed !== null && parsed.etaMs > 0;

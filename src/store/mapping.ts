@@ -10,6 +10,7 @@ export interface TaskRow {
   note: string | null;
   strategy: Task['strategy'];
   eta_ms: number;
+  initial_eta_ms?: number | null;
   state: Task['state'];
   attempts: number;
   next_fire_at: number;
@@ -39,6 +40,7 @@ export function rowToTaskPlain(row: TaskRow): Task {
     note: row.note ?? undefined,
     strategy: row.strategy,
     etaMs: asNum(row.eta_ms),
+    initialEtaMs: asNum(row.initial_eta_ms, asNum(row.eta_ms)),
     state: row.state,
     attempts: asNum(row.attempts),
     nextFireAt: asNum(row.next_fire_at),
@@ -73,6 +75,7 @@ export function taskToRowPlain(task: Task, userId: string): TaskRow {
     note: task.note ?? null,
     strategy: task.strategy,
     eta_ms: task.etaMs,
+    initial_eta_ms: task.initialEtaMs ?? task.etaMs,
     state: task.state,
     attempts: task.attempts,
     next_fire_at: task.nextFireAt,
@@ -103,6 +106,7 @@ export async function taskToRow(
     note: null,
     strategy: 'converging',
     eta_ms: 0,
+    initial_eta_ms: 0,
     state: task.state,
     attempts: 0,
     next_fire_at: task.nextFireAt,

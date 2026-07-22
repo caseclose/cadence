@@ -123,6 +123,11 @@ export function schedule(
       };
     }
 
+    case 'snooze': {
+      const duration = clamp(action.durationMs, cfg.minIntervalMs, cfg.maxIntervalMs);
+      return { ...base, state: 'snoozed', nextFireAt: now + duration };
+    }
+
     case 'checked_not_done': {
       const attempt = task.attempts + 1;
       return {

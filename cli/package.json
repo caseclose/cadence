@@ -1,0 +1,1 @@
+{"name":"cadence-cli","private":true,"type":"module","scripts":{"build":"tsc -p tsconfig.json"},"dependencies":{"@supabase/supabase-js":"^2.45.4"},"devDependencies":{"typescript":"^5.5.4","@types/node":"^20.19.43"}}

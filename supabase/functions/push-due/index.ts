@@ -13,7 +13,7 @@ import webpush from 'npm:web-push@3.6.7';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cadence-cron-secret',
 };
 
 const REMINDER_TEXT =
@@ -105,6 +105,11 @@ Deno.serve(async (req) => {
       }
       const allOk = results.every((r) => r.ok);
       return json({ ok: allOk, results }, allOk ? 200 : 502);
+    }
+
+    const cronSecret = Deno.env.get('CADENCE_CRON_SECRET');
+    if (!cronSecret || req.headers.get('x-cadence-cron-secret') !== cronSecret) {
+      return json({ error: 'Unauthorized' }, 401);
     }
 
     const pushEnabled = Boolean(vapidPublic && vapidPrivate);
@@ -270,6 +275,23 @@ Deno.serve(async (req) => {
 });
 
 
+
+function isAllowedWebhookUrl(raw: string, provider: Provider): boolean {
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== 'https:' || url.port) return false;
+    const host = url.hostname.toLowerCase();
+    const domains: Record<Provider, string[]> = {
+      feishu: ['open.feishu.cn'],
+      wecom: ['qyapi.weixin.qq.com'],
+      dingtalk: ['oapi.dingtalk.com'],
+    };
+    return domains[provider].includes(host);
+  } catch {
+    return false;
+  }
+}
+
 function formatWebhookReminder(tasks: DueTask[]): string {
   const lines = ['Cadence · 任务到点提醒'];
   for (const task of tasks) {
@@ -284,6 +306,7 @@ async function sendChatWebhook(
   text: string,
 ): Promise<{ ok: boolean; detail?: string }> {
   const { url, body } = await buildWebhookRequest(hook, text);
+  if (!isAllowedWebhookUrl(url, hook.provider)) return { ok: false, detail: 'Unsafe webhook URL' };
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

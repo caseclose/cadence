@@ -138,3 +138,19 @@ describe('reestimate and done', () => {
     expect(t.note).toBe('ctx');
   });
 });
+
+
+describe('explicit snooze', () => {
+  it('uses the requested duration without jitter or consuming attempts', () => {
+    const task = createTask({ id: 's', title: 'wait', strategy: 'converging', etaMs: 60 * MIN }, 0);
+    const snoozed = schedule(task, { type: 'snooze', durationMs: 60 * MIN }, 123, DEFAULT_BACKOFF, () => 0);
+    expect(snoozed.nextFireAt).toBe(123 + 60 * MIN);
+    expect(snoozed.attempts).toBe(0);
+  });
+
+  it('clamps an explicit snooze to scheduler bounds', () => {
+    const task = createTask({ id: 's', title: 'wait', strategy: 'converging', etaMs: 60 * MIN }, 0);
+    const snoozed = schedule(task, { type: 'snooze', durationMs: 1 }, 0);
+    expect(snoozed.nextFireAt).toBe(DEFAULT_BACKOFF.minIntervalMs);
+  });
+});

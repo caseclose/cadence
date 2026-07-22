@@ -12,6 +12,7 @@ interface Props {
   onOpenMemo?: (id: string) => void;
   onUpdateTitle?: (id: string, title: string) => void;
   onReopen?: (id: string) => void;
+  onSaveTemplate?: (task: Task) => void;
   done?: boolean;
 }
 
@@ -23,6 +24,7 @@ export function TaskCard({
   onOpenMemo,
   onUpdateTitle,
   onReopen,
+  onSaveTemplate,
   done,
 }: Props) {
   useLocale();
@@ -103,6 +105,7 @@ export function TaskCard({
               {task.note?.trim() ? t('memo') : t('writeMemo')}
             </button>
           )}
+          {onSaveTemplate && <button type="button" className="ghost" onClick={() => onSaveTemplate(task)}>{t('saveTemplate')}</button>}
           <button type="button" className="ghost" onClick={() => onCheck(task.id)}>
             {t('viewNow')}
           </button>

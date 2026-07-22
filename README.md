@@ -75,6 +75,20 @@ Cadence 提供三种通知通道，可按使用环境组合开启：
 
 任务可以附带 Markdown 备忘录，用来保存命令、链接、上下文和检查清单。备忘录支持居中宽模态编辑 / 预览，并会在输入后自动保存；到点提醒中点击备忘录即可直接打开编辑。
 
+
+## CLI
+
+登录同步用户可使用 CLI 从终端创建或查看加密任务。CLI 在本机用 `CADENCE_PASSWORD` 解开 DEK；密码不会写入配置文件，也不会发送到 Cadence 服务端。
+
+```bash
+cd cli
+npm install
+npm run build
+node dist/index.js login --url "$VITE_SUPABASE_URL" --anon-key "$VITE_SUPABASE_ANON_KEY" --username your-name --password 'login-password'
+CADENCE_PASSWORD='login-password' node dist/index.js task add --title '等 CI 完成' --eta-ms 3600000
+CADENCE_PASSWORD='login-password' node dist/index.js task list
+```
+
 ## 技术栈
 
 - React + Vite + TypeScript，纯静态前端

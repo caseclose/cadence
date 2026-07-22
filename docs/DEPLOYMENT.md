@@ -90,6 +90,21 @@ npx serve dist -l 8080
 
 需要关页 / 锁屏也能提醒时，按 [PUSH.md](PUSH.md) 配置 VAPID、部署 `push-due` Edge Function、执行 `migration_push.sql`。iOS 必须「添加到主屏幕」后使用。
 
+
+## CLI（可选）
+
+CLI 位于 `cli/`，使用当前账号的 Supabase JWT 经 RLS 访问任务。首次登录保存的仅是 session（`~/.config/cadence/config.json`，权限 0600）；每次读取或创建任务都必须临时提供 `CADENCE_PASSWORD` 解开 E2EE 数据密钥。不要将这个密码写进 shell 配置文件或 CI 日志。
+
+```bash
+cd cli && npm install && npm run build
+node dist/index.js login --url "$VITE_SUPABASE_URL" --anon-key "$VITE_SUPABASE_ANON_KEY" --username YOUR_USERNAME --password 'LOGIN_PASSWORD'
+CADENCE_PASSWORD='LOGIN_PASSWORD' node dist/index.js task add --title '等部署完成' --eta-ms 1800000
+```
+
+## 每日摘要（可选）
+
+先执行 [`../supabase/migration_digest.sql`](../supabase/migration_digest.sql) 与 [`../supabase/migration_templates_events.sql`](../supabase/migration_templates_events.sql)，再部署 `daily-digest` Edge Function，并设置 `CADENCE_CRON_SECRET`。然后按 [`../supabase/migration_daily_digest_cron.sql`](../supabase/migration_daily_digest_cron.sql) 用 Vault 配置每 5 分钟调度。摘要在用户本地时区和设置时间发送，仅包含活跃/到期任务计数，不含 E2EE 任务内容。
+
 ## 部署到 GitHub Pages
 
 1. Fork 或 push 到 GitHub 仓库（默认 base 为 `/cadence/`，CI 会按仓库名自动设置 `VITE_BASE`）。

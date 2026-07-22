@@ -157,22 +157,25 @@ export async function unwrapDekWithPrivateKey(wrappedB64: string, privateKey: Cr
   ]);
 }
 
-export async function encryptTaskPayload(dek: CryptoKey, task: Task): Promise<string> {
+export async function encryptPayload(dek: CryptoKey, payload: unknown): Promise<string> {
   const iv = randomBytes(12);
-  const plain = new TextEncoder().encode(JSON.stringify(task));
+  const plain = new TextEncoder().encode(JSON.stringify(payload));
   const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: ab(iv) }, dek, plain);
   const blob: EncryptedBlob = { v: E2EE_VERSION, iv: b64Encode(iv), ct: b64Encode(ct) };
   return JSON.stringify(blob);
 }
 
-export async function decryptTaskPayload(dek: CryptoKey, enc: string): Promise<Task> {
+export async function decryptPayload<T>(dek: CryptoKey, enc: string): Promise<T> {
   const blob = JSON.parse(enc) as EncryptedBlob;
   if (blob.v !== E2EE_VERSION) throw new Error('unsupported e2ee version');
   const iv = b64Decode(blob.iv);
   const ct = b64Decode(blob.ct);
   const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: ab(iv) }, dek, ab(ct));
-  return JSON.parse(new TextDecoder().decode(plain)) as Task;
+  return JSON.parse(new TextDecoder().decode(plain)) as T;
 }
+
+export const encryptTaskPayload = (dek: CryptoKey, task: Task) => encryptPayload(dek, task);
+export const decryptTaskPayload = (dek: CryptoKey, enc: string) => decryptPayload<Task>(dek, enc);
 
 /** Create metadata + in-memory keys for a new account. */
 export async function createE2EEAccount(password: string): Promise<{

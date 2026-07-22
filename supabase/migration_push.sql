@@ -50,9 +50,10 @@ create extension if not exists pg_cron with schema extensions;
 --    REPLACE the placeholders below with your project refs before running:
 --
 --    PROJECT_REF  → e.g. yqmgwwyhrbulesxrncsb
---    SERVICE_ROLE → Settings → API → service_role (secret) key
+--    PROJECT_REF → e.g. yqmgwwyhrbulesxrncsb
 --
---    Or store the key in Vault and reference it (recommended for production).
+-- Store a random cron secret in Vault first:
+--   select vault.create_secret('YOUR_RANDOM_SECRET', 'cadence_cron_secret');
 
 -- Unschedule previous job if re-running this migration.
 select cron.unschedule(jobid)
@@ -68,7 +69,7 @@ select cron.schedule(
     url := 'https://PROJECT_REF.supabase.co/functions/v1/push-due',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'Authorization', 'Bearer SERVICE_ROLE_KEY_HERE'
+      'x-cadence-cron-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'cadence_cron_secret')
     ),
     body := '{}'::jsonb
   );

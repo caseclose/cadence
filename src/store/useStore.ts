@@ -12,7 +12,8 @@ import {
   userHasE2EE,
 } from '../crypto/keyring';
 import { createTask, schedule } from '../scheduler/backoff';
-import { Action, BackoffConfig, DEFAULT_BACKOFF, Strategy, Task } from '../scheduler/types';
+import { decryptPayload, encryptPayload } from '../crypto/e2ee';
+import { Action, BackoffConfig, DEFAULT_BACKOFF, Strategy, Task, TaskEvent, TaskTemplate } from '../scheduler/types';
 import { t } from '../i18n';
 import { supabase, isCloudEnabled } from './supabase';
 import { rowToTask, taskToRow, TaskRow } from './mapping';
@@ -24,6 +25,8 @@ import { ensurePushSubscription, subscribeToPush, unsubscribeFromPush } from '..
 const LS_TASKS_LEGACY = 'cadence.tasks.v1';
 const LS_TASKS_PREFIX = 'cadence.tasks.v1.';
 const LS_CONFIG = 'cadence.config.v1';
+const LS_EVENTS = 'cadence.events.v1';
+const LS_TEMPLATES = 'cadence.templates.v1';
 
 function tasksKey(uid: string): string {
   return `${LS_TASKS_PREFIX}${uid}`;
@@ -67,6 +70,9 @@ function loadTasks(): Task[] {
   return loadInitialTasks();
 }
 
+function loadEvents(): TaskEvent[] { return loadLocal<TaskEvent[]>(LS_EVENTS, []); }
+function loadTemplates(): TaskTemplate[] { return loadLocal<TaskTemplate[]>(LS_TEMPLATES, []); }
+
 function loadConfig(): BackoffConfig {
   const data = loadLocal<unknown>(LS_CONFIG, DEFAULT_BACKOFF);
   if (!data || typeof data !== 'object') return DEFAULT_BACKOFF;
@@ -99,6 +105,8 @@ function syncE2EEFlags(user: User | null): Pick<StoreState, 'e2eeEnabled' | 'e2e
 interface StoreState {
   tasks: Task[];
   config: BackoffConfig;
+  events: TaskEvent[];
+  templates: TaskTemplate[];
   user: User | null;
   cloudEnabled: boolean;
   ready: boolean;
@@ -120,6 +128,9 @@ interface StoreState {
   syncWebhookContent: () => Promise<void>;
   deleteTask: (id: string) => void;
   setConfig: (patch: Partial<BackoffConfig>) => void;
+  saveTemplate: (template: Omit<TaskTemplate, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  deleteTemplate: (id: string) => void;
+  addFromTemplate: (id: string) => void;
 
   signInWithUsername: (username: string, password: string) => Promise<string | null>;
   signUpWithUsername: (username: string, password: string) => Promise<string | null>;
@@ -148,6 +159,43 @@ async function upsertRemote(task: Task, userId: string) {
 async function deleteRemote(id: string) {
   if (!supabase) return;
   await supabase.from('tasks').delete().eq('id', id);
+}
+
+async function upsertTemplateRemote(template: TaskTemplate, userId: string) {
+  if (!supabase || !getDek()) return;
+  const enc = await encryptPayload(getDek()!, template);
+  await supabase.from('task_templates').upsert({ id: template.id, user_id: userId, enc, created_at: template.createdAt, updated_at: template.updatedAt });
+}
+
+async function deleteTemplateRemote(id: string) {
+  if (supabase) await supabase.from('task_templates').delete().eq('id', id);
+}
+
+async function appendEventRemote(event: TaskEvent, userId: string) {
+  if (!supabase || !getDek()) return;
+  const enc = await encryptPayload(getDek()!, event);
+  await supabase.from('task_events').insert({ id: event.id, user_id: userId, task_id: event.taskId, enc, created_at: event.at });
+}
+
+async function syncRemoteInsights(uid: string, get: () => StoreState, set: (partial: Partial<StoreState>) => void) {
+  if (!supabase || get().e2eeLocked || !getDek()) return;
+  const [{ data: templateRows }, { data: eventRows }] = await Promise.all([
+    supabase.from('task_templates').select('id, enc').eq('user_id', uid),
+    supabase.from('task_events').select('id, enc').eq('user_id', uid).order('created_at'),
+  ]);
+  const templates: TaskTemplate[] = [];
+  for (const row of templateRows ?? []) { try { templates.push(await decryptPayload<TaskTemplate>(getDek()!, row.enc)); } catch { /* ignore malformed ciphertext */ } }
+  const events: TaskEvent[] = [];
+  for (const row of eventRows ?? []) { try { events.push(await decryptPayload<TaskEvent>(getDek()!, row.enc)); } catch { /* ignore malformed ciphertext */ } }
+  const mergedTemplates = new Map([...templates, ...get().templates].map((item) => [item.id, item]));
+  const mergedEvents = new Map([...events, ...get().events].map((item) => [item.id, item]));
+  const nextTemplates = [...mergedTemplates.values()];
+  const nextEvents = [...mergedEvents.values()].sort((a, b) => a.at - b.at);
+  set({ templates: nextTemplates, events: nextEvents });
+  saveLocal(LS_TEMPLATES, nextTemplates);
+  saveLocal(LS_EVENTS, nextEvents);
+  for (const template of nextTemplates) void upsertTemplateRemote(template, uid);
+  for (const event of nextEvents) void appendEventRemote(event, uid);
 }
 
 let authListenerBound = false;
@@ -251,6 +299,7 @@ async function syncRemoteTasks(
     }
   }
   bindRealtime(uid, get, set);
+  await syncRemoteInsights(uid, get, set);
 }
 
 async function ensureE2EEWithPassword(user: User, username: string, password: string): Promise<string | null> {
@@ -309,6 +358,8 @@ async function restoreE2EEFlags(user: User | null): Promise<{
 export const useStore = create<StoreState>((set, get) => ({
   tasks: loadTasks(),
   config: loadConfig(),
+  events: loadEvents(),
+  templates: loadTemplates(),
   user: null,
   cloudEnabled: isCloudEnabled,
   ready: false,
@@ -370,9 +421,12 @@ export const useStore = create<StoreState>((set, get) => ({
     const now = Date.now();
     const task = createTask({ id: uuid(), ...input }, now);
     const next = [...get().tasks, task];
-    set({ tasks: next });
+    const event = { id: uuid(), taskId: task.id, type: 'created' as const, at: now };
+    const events = [...get().events, event];
+    set({ tasks: next, events });
     saveTasks(next, uid ?? null);
-    if (uid) void upsertRemote(task, uid);
+    saveLocal(LS_EVENTS, events);
+    if (uid) { void upsertRemote(task, uid); void appendEventRemote(event, uid); }
   },
 
   applyAction: (id, action) => {
@@ -385,10 +439,14 @@ export const useStore = create<StoreState>((set, get) => ({
       updated = schedule(t, action, now, cfg);
       return updated;
     });
-    set({ tasks: next });
+    const eventType = action.type === 'no_resources' ? 'snooze' : action.type;
+    const event = updated ? { id: uuid(), taskId: id, type: eventType as TaskEvent['type'], at: now, etaMs: 'etaMs' in action ? action.etaMs : undefined, durationMs: 'durationMs' in action ? action.durationMs : undefined } : null;
+    const events = event ? [...get().events, event] : get().events;
+    set({ tasks: next, events });
     saveTasks(next, get().user?.id ?? null);
+    saveLocal(LS_EVENTS, events);
     const uid = get().user?.id;
-    if (uid && updated) void upsertRemote(updated, uid);
+    if (uid && updated) { void upsertRemote(updated, uid); if (event) void appendEventRemote(event, uid); }
   },
 
   reopenTask: (id) => {
@@ -450,6 +508,27 @@ export const useStore = create<StoreState>((set, get) => ({
     const config = { ...get().config, ...patch };
     set({ config });
     saveLocal(LS_CONFIG, config);
+  },
+
+  saveTemplate: (input) => {
+    const now = Date.now();
+    const template = { ...input, id: uuid(), createdAt: now, updatedAt: now };
+    const templates = [...get().templates, template];
+    set({ templates });
+    saveLocal(LS_TEMPLATES, templates);
+    if (get().user?.id) void upsertTemplateRemote(template, get().user!.id);
+  },
+
+  deleteTemplate: (id) => {
+    const templates = get().templates.filter((template) => template.id !== id);
+    set({ templates });
+    saveLocal(LS_TEMPLATES, templates);
+    if (get().user?.id) void deleteTemplateRemote(id);
+  },
+
+  addFromTemplate: (id) => {
+    const template = get().templates.find((item) => item.id === id);
+    if (template) get().addTask({ title: template.title, note: template.note, strategy: template.strategy, etaMs: template.etaMs, priority: template.priority });
   },
 
   signInWithUsername: async (username, password) => {
