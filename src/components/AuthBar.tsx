@@ -1,13 +1,37 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useStore } from '../store/useStore';
 import { displayUsername, validateUsername } from '../store/username';
+import {
+  hasActivePushSubscription,
+  isPushConfigured,
+  isPushSupported,
+} from '../notify/push';
 
 export function AuthBar() {
-  const { user, cloudEnabled, signInWithUsername, signUpWithUsername, signOut } = useStore();
+  const {
+    user,
+    cloudEnabled,
+    signInWithUsername,
+    signUpWithUsername,
+    signOut,
+    enablePush,
+    disablePush,
+  } = useStore();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [pushOn, setPushOn] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushMsg, setPushMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) {
+      setPushOn(false);
+      return;
+    }
+    void hasActivePushSubscription().then(setPushOn);
+  }, [user]);
 
   if (!cloudEnabled) {
     return <span className="auth-chip auth-chip-muted">本地模式</span>;
@@ -16,6 +40,30 @@ export function AuthBar() {
   if (user) {
     const name = displayUsername(user);
     const initial = name[0]?.toUpperCase() ?? '?';
+    const pushAvailable = isPushSupported() && isPushConfigured();
+
+    const togglePush = async () => {
+      setPushBusy(true);
+      setPushMsg(null);
+      if (pushOn) {
+        const err = await disablePush();
+        setPushBusy(false);
+        if (err) {
+          setPushMsg(err);
+          return;
+        }
+        setPushOn(false);
+        return;
+      }
+      const err = await enablePush();
+      setPushBusy(false);
+      if (err) {
+        setPushMsg(err);
+        return;
+      }
+      setPushOn(true);
+    };
+
     return (
       <div className="auth-user">
         <span className="auth-avatar" aria-hidden>
@@ -24,9 +72,25 @@ export function AuthBar() {
         <span className="auth-email" title={name}>
           {name}
         </span>
+        {pushAvailable && (
+          <button
+            type="button"
+            className="btn-sm btn-ghost"
+            disabled={pushBusy}
+            title={
+              pushOn
+                ? '关闭本设备的后台推送'
+                : '开启后台推送（关页/锁屏也可提醒；iOS 需先添加到主屏幕）'
+            }
+            onClick={() => void togglePush()}
+          >
+            {pushBusy ? '…' : pushOn ? '推送开' : '开启推送'}
+          </button>
+        )}
         <button type="button" className="btn-sm btn-ghost" onClick={() => void signOut()}>
           退出
         </button>
+        {pushMsg && <p className="auth-msg auth-msg-inline">{pushMsg}</p>}
       </div>
     );
   }

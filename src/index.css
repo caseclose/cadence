@@ -290,13 +290,14 @@ body {
 .auth-user {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
   padding: 6px 10px 6px 6px;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 12px;
   box-shadow: var(--shadow-sm);
-  max-width: 320px;
+  max-width: 420px;
 }
 
 .auth-avatar {
@@ -341,6 +342,12 @@ body {
   line-height: 1.35;
   max-width: 360px;
   text-align: right;
+}
+
+.auth-msg-inline {
+  flex-basis: 100%;
+  text-align: left;
+  padding-inline-start: 4px;
 }
 
 .btn-sm {

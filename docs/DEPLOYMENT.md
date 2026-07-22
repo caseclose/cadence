@@ -83,7 +83,12 @@ npx serve dist -l 8080
 |------|------|------|
 | `VITE_SUPABASE_URL` | 否 | Supabase 项目 URL；留空则纯本地模式 |
 | `VITE_SUPABASE_ANON_KEY` | 否 | 浏览器端 anon / publishable key |
+| `VITE_VAPID_PUBLIC_KEY` | 否 | Web Push VAPID 公钥；不配则无「开启推送」按钮。见 [PUSH.md](PUSH.md) |
 | `VITE_BASE` | 否 | 构建时的 base 路径；本地部署用 `/`，一般不必手写（`build:local` 已处理） |
+
+## 手机后台推送（可选）
+
+需要关页 / 锁屏也能提醒时，按 [PUSH.md](PUSH.md) 配置 VAPID、部署 `push-due` Edge Function、执行 `migration_push.sql`。iOS 必须「添加到主屏幕」后使用。
 
 ## 部署到 GitHub Pages
 

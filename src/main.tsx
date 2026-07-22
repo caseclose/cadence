@@ -11,3 +11,12 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     </ErrorBoundary>
   </React.StrictMode>,
 );
+
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  const base = import.meta.env.BASE_URL;
+  window.addEventListener('load', () => {
+    void navigator.serviceWorker.register(`${base}sw.js`, { scope: base }).catch((err) => {
+      console.warn('service worker registration failed', err);
+    });
+  });
+}

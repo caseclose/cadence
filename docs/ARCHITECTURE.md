@@ -31,10 +31,18 @@ src/
 ├── crypto/                # 端到端加密
 │   ├── e2ee.ts             #   RSA/AES/PBKDF2 原语
 │   └── keyring.ts          #   会话内 DEK 管理
-├── notify/index.ts        # 通知通道抽象（当前：Web Notification + Web Audio）
+├── notify/
+│   ├── index.ts            #   本地通道：Web Notification + Web Audio
+│   └── push.ts             #   Web Push 订阅 / 退订（后台推送）
 ├── theme/                 # 主题定义与 hook
 └── util/time.ts           # 时间解析/格式化
 ```
+
+根目录与 `public/` 相关：
+
+- `public/sw.js` — Service Worker（收推送、点通知打开应用）
+- `public/manifest.webmanifest` + `public/icons/` — PWA 安装
+- `supabase/functions/push-due/` — 到点推送 Edge Function
 
 ## 数据流
 
@@ -81,7 +89,15 @@ src/
 
 登录用户的任务内容在浏览器内加密后才同步，云端只存密文。完整机制见 [PRIVACY-E2EE.md](PRIVACY-E2EE.md)。
 
+为支持后台 Web Push，加密行会把 **`next_fire_at` / `state` 明文**留给服务器（内容仍在 `enc`）。推送文案为通用文字，不含任务标题。见 [PUSH.md](PUSH.md)。
+
+## 后台推送（可选）
+
+- 前端：`public/sw.js` + `src/notify/push.ts`；登录后可点「开启推送」
+- 后端：`supabase/functions/push-due` + `pg_cron` 每分钟扫描到点任务
+- 运维步骤与 iOS「添加到主屏幕」要求见 [PUSH.md](PUSH.md)
+
 ## 已知局限与后续
 
-- Web Notification 只在标签页开着时触发；关页/后台推送需 Service Worker + Web Push（notify 层已预留通道抽象）。
+- 未配置 VAPID / 未订阅推送时，提醒仍依赖标签页开着时的本地 ticker + Notification。
 - 同步为 last-write-wins，不做冲突合并 UI。

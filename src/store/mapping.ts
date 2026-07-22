@@ -19,6 +19,8 @@ export interface TaskRow {
   completed_at: number | null;
   /** Present when task body is E2EE; plaintext columns are placeholders. */
   enc?: string | null;
+  /** Last next_fire_at for which a Web Push was sent (server-side dedupe). */
+  notified_fire_at?: number | null;
 }
 
 const PLACEHOLDER_TITLE = '[e2ee]';
@@ -83,6 +85,8 @@ export function taskToRowPlain(task: Task, userId: string): TaskRow {
 export async function taskToRow(task: Task, userId: string, dek: CryptoKey | null): Promise<TaskRow> {
   if (!dek) return taskToRowPlain(task, userId);
   const enc = await encryptTaskPayload(dek, task);
+  // Content stays in enc; expose timing/state so the server can fire Web Push
+  // without reading the task body (push copy is generic).
   return {
     id: task.id,
     user_id: userId,
@@ -90,9 +94,9 @@ export async function taskToRow(task: Task, userId: string, dek: CryptoKey | nul
     note: null,
     strategy: 'converging',
     eta_ms: 0,
-    state: 'waiting',
+    state: task.state,
     attempts: 0,
-    next_fire_at: 0,
+    next_fire_at: task.nextFireAt,
     priority: 0,
     created_at: task.createdAt,
     updated_at: task.updatedAt,

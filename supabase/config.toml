@@ -1,0 +1,8 @@
+# Supabase Edge Function config for Cadence push-due.
+# Deploy with: supabase functions deploy push-due
+
+[functions.push-due]
+verify_jwt = false
+# Cron / pg_net calls with the service_role Bearer token; verify_jwt=false
+# lets the function accept that header without requiring an end-user JWT.
+# The function itself uses SERVICE_ROLE_KEY for DB access.

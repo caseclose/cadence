@@ -15,6 +15,7 @@ import { rowToTask, taskToRow, TaskRow } from './mapping';
 import { mapAuthError } from './authErrors';
 import { usernameToEmail, validateUsername } from './username';
 import { sanitizeTasks } from './taskSanitize';
+import { ensurePushSubscription, subscribeToPush, unsubscribeFromPush } from '../notify/push';
 
 const LS_TASKS_LEGACY = 'cadence.tasks.v1';
 const LS_TASKS_PREFIX = 'cadence.tasks.v1.';
@@ -116,6 +117,8 @@ interface StoreState {
   signUpWithUsername: (username: string, password: string) => Promise<string | null>;
   signOut: () => Promise<void>;
   unlockVault: (password: string) => Promise<string | null>;
+  enablePush: () => Promise<string | null>;
+  disablePush: () => Promise<string | null>;
   exportJson: () => string;
   importJson: (json: string) => void;
 }
@@ -257,6 +260,9 @@ function clearSessionTasks(set: (partial: Partial<StoreState>) => void) {
     realtimeChannel = null;
   }
   lockKeyring();
+  void unsubscribeFromPush().catch(() => {
+    /* best-effort */
+  });
   set({ tasks: [], e2eeEnabled: false, e2eeLocked: false });
 }
 
@@ -364,6 +370,7 @@ export const useStore = create<StoreState>((set, get) => ({
 
     set({ user: data.user, e2eeEnabled: true, e2eeLocked: false });
     await syncRemoteTasks(data.user.id, get, set);
+    void ensurePushSubscription(data.user.id);
     return null;
   },
 
@@ -385,6 +392,7 @@ export const useStore = create<StoreState>((set, get) => ({
 
     set({ user: data.user, e2eeEnabled: true, e2eeLocked: false });
     await syncRemoteTasks(data.user.id, get, set);
+    void ensurePushSubscription(data.user.id);
     return null;
   },
 
@@ -399,7 +407,23 @@ export const useStore = create<StoreState>((set, get) => ({
     if (e2eeErr) return e2eeErr;
     set({ e2eeLocked: false, e2eeEnabled: true });
     await syncRemoteTasks(user.id, get, set);
+    void ensurePushSubscription(user.id);
     return null;
+  },
+
+  enablePush: async () => {
+    const uid = get().user?.id;
+    if (!uid) return '请先登录';
+    return subscribeToPush(uid);
+  },
+
+  disablePush: async () => {
+    try {
+      await unsubscribeFromPush();
+      return null;
+    } catch (err) {
+      return err instanceof Error ? err.message : '关闭推送失败';
+    }
   },
 
   signOut: async () => {
