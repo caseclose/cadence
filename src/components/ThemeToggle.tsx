@@ -1,7 +1,9 @@
 import { useTheme } from '../theme/useTheme';
+import { useLocale, t } from '../i18n';
 
 export function ThemeToggle() {
   const { theme, toggle } = useTheme();
+  useLocale();
   const isDark = theme === 'dark';
 
   return (
@@ -9,8 +11,8 @@ export function ThemeToggle() {
       type="button"
       className="theme-toggle"
       onClick={toggle}
-      aria-label={isDark ? '切换到浅色模式' : '切换到深色模式'}
-      title={isDark ? '浅色模式' : '深色模式'}
+      aria-label={isDark ? (t('switchToChinese') + ' / light') : (t('switchToEnglish') + ' / dark')}
+      title={isDark ? 'Light mode' : 'Dark mode'}
     >
       <span className="theme-toggle-icon" aria-hidden>
         {isDark ? '☀' : '☽'}

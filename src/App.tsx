@@ -12,8 +12,11 @@ import { ProjectIntro } from './components/ProjectIntro';
 import { UnlockVault } from './components/UnlockVault';
 import { WebhookSettings } from './components/WebhookSettings';
 import { MemoModal } from './components/MemoModal';
+import { LanguageToggle } from './components/LanguageToggle';
+import { useLocale, t } from './i18n';
 
 export default function App() {
+  useLocale();
   const {
     tasks,
     ready,
@@ -116,10 +119,11 @@ export default function App() {
           </div>
           <div className="site-toolbar">
             <div className="toolbar-cluster">
+              <LanguageToggle />
               <ThemeToggle />
               {notifPerm !== 'granted' && (
                 <button type="button" className="toolbar-btn" onClick={enableNotifications}>
-                  开启网页通知
+                  {t('enableWeb')}
                 </button>
               )}
             </div>
@@ -136,30 +140,30 @@ export default function App() {
 
         <section>
           <div className="section-head">
-            <h2>挂起队列</h2>
+            <h2>{t('queue')}</h2>
             {canManageTasks && (
               <div className="tools">
                 <button className="link" onClick={onExport}>
-                  导出
+                  {t('export')}
                 </button>
                 <button className="link" onClick={onImport}>
-                  导入
+                  {t('import')}
                 </button>
               </div>
             )}
           </div>
-          {!ready && <div className="empty">加载中…</div>}
+          {!ready && <div className="empty">{t('loading')}</div>}
           {ready && !canManageTasks && user && e2eeLocked && (
-            <div className="empty">请先输入密码解锁加密任务。</div>
+            <div className="empty">{t('unlockToView')}</div>
           )}
           {ready && !canManageTasks && user && !e2eeLocked && (
-            <div className="empty">登录后查看和同步你的任务。</div>
+            <div className="empty">{t('loginToView')}</div>
           )}
           {ready && !canManageTasks && !user && (
             <div className="empty">登录后查看和同步你的任务。</div>
           )}
           {ready && canManageTasks && activeTasks.length === 0 && (
-            <div className="empty">还没有挂起的任务。上面挂起一个试试。</div>
+            <div className="empty">{t('empty')}</div>
           )}
           <div className="task-list">
             {activeTasks.map((t) => (
@@ -179,7 +183,7 @@ export default function App() {
         {doneTasks.length > 0 && (
           <section>
             <div className="section-head">
-              <h2>已完成</h2>
+              <h2>{t('completed')}</h2>
             </div>
             <div className="task-list">
               {doneTasks.map((t) => (

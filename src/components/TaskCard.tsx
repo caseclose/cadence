@@ -2,6 +2,7 @@ import { Task } from '../scheduler/types';
 import { formatRelative, formatDuration } from '../util/time';
 import { noteSummary } from '../util/markdown';
 import { useState, type CSSProperties } from 'react';
+import { useLocale, t } from '../i18n';
 
 interface Props {
   task: Task;
@@ -13,15 +14,12 @@ interface Props {
   done?: boolean;
 }
 
-const stateLabel: Record<Task['state'], string> = {
-  waiting: '等待中',
-  due: '待确认',
-  polling: '轮询中',
-  snoozed: '已小睡',
-  done: '已完成',
-};
-
 export function TaskCard({ task, now, onCheck, onDelete, onOpenMemo, onUpdateTitle, done }: Props) {
+  useLocale();
+  const stateLabel: Record<Task['state'], string> = {
+    waiting: t('waiting'), due: t('due'), polling: t('polling'),
+    snoozed: t('snoozed'), done: t('done'),
+  };
   const overdue = !done && task.nextFireAt <= now && task.state !== 'done';
   const remainingRatio = Math.max(0, Math.min(1, (task.nextFireAt - now) / Math.max(task.etaMs, 1)));
   const urgency = done ? 'done' : overdue ? 'overdue' : remainingRatio > 0.6 ? 'fresh' : remainingRatio > 0.25 ? 'near' : 'urgent';
@@ -59,7 +57,7 @@ export function TaskCard({ task, now, onCheck, onDelete, onOpenMemo, onUpdateTit
             className={`task-title task-title-button ${locked ? 'task-title-locked' : ''}`}
             disabled={locked || !onUpdateTitle}
             onClick={() => setEditingTitle(true)}
-            title={locked ? '解锁后查看任务名称' : '点击编辑任务名称'}
+            title={locked ? t('lockedTitle') : t('editTitle')}
           >
             {locked ? '🔒 任务已加密，输入密码进行本地解密' : task.title}
           </button>
@@ -77,12 +75,12 @@ export function TaskCard({ task, now, onCheck, onDelete, onOpenMemo, onUpdateTit
         <div className="task-meta">
           <span className={`badge s-${task.state}`}>{stateLabel[task.state]}</span>
           <span className="badge strategy">
-            {task.strategy === 'converging' ? '收敛' : '指数'}
+            {task.strategy === 'converging' ? t('convergingShort') : t('exponentialShort')}
           </span>
           <span>ETA {formatDuration(task.etaMs)}</span>
           {!done && (
             <>
-              <span>· 提醒 {task.attempts} 次</span>
+              <span>· {t('reminderCount')} {task.attempts}</span>
               <span>· {formatRelative(task.nextFireAt, now)}</span>
             </>
           )}
@@ -92,7 +90,7 @@ export function TaskCard({ task, now, onCheck, onDelete, onOpenMemo, onUpdateTit
         <div className="task-actions">
           {onOpenMemo && !locked && (
             <button type="button" className="ghost" onClick={() => onOpenMemo(task.id)}>
-              {task.note?.trim() ? '备忘录' : '写备忘录'}
+              {task.note?.trim() ? t('memo') : t('writeMemo')}
             </button>
           )}
           <button type="button" className="ghost" onClick={() => onCheck(task.id)}>

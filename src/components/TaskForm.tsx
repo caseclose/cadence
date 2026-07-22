@@ -1,4 +1,5 @@
 import { FormEvent, useState } from 'react';
+import { useLocale, t } from '../i18n';
 import { Strategy } from '../scheduler/types';
 import { parseWhen, formatDuration, formatFireAt } from '../util/time';
 import { WhenFormatGuide } from './WhenFormatGuide';
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export function TaskForm({ onAdd, disabled }: Props) {
+  const locale = useLocale();
   const [title, setTitle] = useState('');
   const [when, setWhen] = useState('');
   const [strategy, setStrategy] = useState<Strategy>('converging');
@@ -29,27 +31,27 @@ export function TaskForm({ onAdd, disabled }: Props) {
 
   const hint = (() => {
     if (!when) return null;
-    if (!parsed) return '无法识别，试试 1h / 10分钟 / 周五下午2点 / 7月22日上午10点';
+    if (!parsed) return t('parseHint');
     if (parsed.kind === 'clock') {
-      return `将在 ${formatFireAt(parsed.fireAt)} 提醒你（约 ${formatDuration(parsed.etaMs)} 后）`;
+      return locale === 'en' ? `Reminder at ${formatFireAt(parsed.fireAt)} (about ${formatDuration(parsed.etaMs)} from now)` : `将在 ${formatFireAt(parsed.fireAt)} 提醒你（约 ${formatDuration(parsed.etaMs)} 后）`;
     }
-    return `将在 ${formatDuration(parsed.etaMs)} 后第一次提醒你`;
+    return locale === 'en' ? `First reminder in ${formatDuration(parsed.etaMs)}` : `将在 ${formatDuration(parsed.etaMs)} 后第一次提醒你`;
   })();
 
   return (
     <form className={`card form-card form${disabled ? ' form-disabled' : ''}`} onSubmit={submit}>
-      <h3 className="form-card-title">挂起新任务</h3>
-      {disabled && <p className="form-login-hint">请先登录后再挂起任务。</p>}
+      <h3 className="form-card-title">{t('formTitle')}</h3>
+      {disabled && <p className="form-login-hint">{t('loginFirst')}</p>}
       <input
         className="field-full"
-        placeholder="任务名称，例如：等模型训练完"
+        placeholder="{t('taskName')}"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         disabled={disabled}
       />
       <input
         className="field-full"
-        placeholder="多久后 / 几点 / 日期时间"
+        placeholder="{t('when')}"
         value={when}
         onChange={(e) => setWhen(e.target.value)}
         disabled={disabled}
@@ -62,17 +64,17 @@ export function TaskForm({ onAdd, disabled }: Props) {
           aria-label="退避策略"
           disabled={disabled}
         >
-          <option value="converging">收敛式 · 越来越勤</option>
-          <option value="exponential">指数式 · 越来越疏</option>
+          <option value="converging">{t('converging')}</option>
+          <option value="exponential">{t('exponential')}</option>
         </select>
         <button type="submit" className="btn-submit" disabled={!canSubmit}>
-          挂起
+          {t('suspend')}
         </button>
       </div>
       <textarea
         className="field-full subtle note-field"
         rows={3}
-        placeholder="备忘录（可选，支持 Markdown：命令、链接、检查清单…）"
+        placeholder="{t('memoPlaceholder')}"
         value={note}
         onChange={(e) => setNote(e.target.value)}
         disabled={disabled}

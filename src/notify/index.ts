@@ -1,4 +1,5 @@
 import { Task } from '../scheduler/types';
+import { getLocale } from '../i18n';
 
 export interface NotifyPayload {
   task: Task;
@@ -78,10 +79,10 @@ export function notifyAll(payload: NotifyPayload): void {
 export function reminderCopy(task: Task): NotifyPayload {
   return {
     task,
-    title: `Cadence · 该看一下「${task.title}」了`,
+    title: getLocale() === 'en' ? `Cadence · Time to check “${task.title}”` : `Cadence · 该看一下「${task.title}」了`,
     body:
-      task.strategy === 'converging'
-        ? '预计应该完成了，确认一下是否可以收工？'
-        : '轮到检查这个挂起任务了，有进展吗？',
+      getLocale() === 'en'
+        ? task.strategy === 'converging' ? 'It should be done by now. Can you wrap up?' : 'Time to check this suspended task. Any progress?'
+        : task.strategy === 'converging' ? '预计应该完成了，确认一下是否可以收工？' : '轮到检查这个挂起任务了，有进展吗？',
   };
 }

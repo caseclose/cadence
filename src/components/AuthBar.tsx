@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocale, t } from '../i18n';
 import { useStore } from '../store/useStore';
 import { displayUsername, validateUsername } from '../store/username';
 import {
@@ -8,6 +9,7 @@ import {
 } from '../notify/push';
 
 export function AuthBar() {
+  useLocale();
   const {
     user,
     cloudEnabled,
@@ -84,7 +86,7 @@ export function AuthBar() {
             }
             onClick={() => void togglePush()}
           >
-            {pushBusy ? '…' : pushOn ? '后台推送已开启' : '开启后台推送'}
+            {pushBusy ? '…' : pushOn ? t('pushEnabled') : t('enablePush')}
           </button>
         )}
         <button type="button" className="btn-sm btn-ghost" onClick={() => void signOut()}>
