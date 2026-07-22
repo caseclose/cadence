@@ -36,7 +36,9 @@ alter table public.tasks enable row level security;
 -- The project was created with "expose new tables" disabled, so we must
 -- explicitly grant Data API access to logged-in users. RLS below still
 -- restricts each user to their own rows.
-grant select, insert, update, delete on public.tasks to authenticated;
+-- service_role is used by the push-due Edge Function (bypasses RLS but still
+-- needs table privileges).
+grant select, insert, update, delete on public.tasks to authenticated, service_role;
 
 drop policy if exists "tasks are private" on public.tasks;
 create policy "tasks are private"
@@ -74,7 +76,7 @@ create index if not exists push_subscriptions_user_idx
 
 alter table public.push_subscriptions enable row level security;
 
-grant select, insert, update, delete on public.push_subscriptions to authenticated;
+grant select, insert, update, delete on public.push_subscriptions to authenticated, service_role;
 
 drop policy if exists "push subscriptions are private" on public.push_subscriptions;
 create policy "push subscriptions are private"
@@ -107,7 +109,7 @@ create index if not exists notification_webhooks_user_idx
 
 alter table public.notification_webhooks enable row level security;
 
-grant select, insert, update, delete on public.notification_webhooks to authenticated;
+grant select, insert, update, delete on public.notification_webhooks to authenticated, service_role;
 
 drop policy if exists "notification webhooks are private" on public.notification_webhooks;
 create policy "notification webhooks are private"

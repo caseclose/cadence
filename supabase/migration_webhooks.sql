@@ -19,7 +19,7 @@ create index if not exists notification_webhooks_user_idx
 
 alter table public.notification_webhooks enable row level security;
 
-grant select, insert, update, delete on public.notification_webhooks to authenticated;
+grant select, insert, update, delete on public.notification_webhooks to authenticated, service_role;
 
 drop policy if exists "notification webhooks are private" on public.notification_webhooks;
 create policy "notification webhooks are private"

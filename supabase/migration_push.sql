@@ -2,6 +2,10 @@
 -- Run once in the Supabase SQL Editor AFTER deploying the push-due Edge Function.
 -- See docs/PUSH.md for full setup (VAPID keys, secrets, cron).
 
+-- 0) The push-due Edge Function runs as service_role; grant it table access
+--    (service_role bypasses RLS but still needs privileges).
+grant select, insert, update, delete on public.tasks to service_role;
+
 -- 1) Dedup column on tasks
 alter table public.tasks
   add column if not exists notified_fire_at bigint;
@@ -27,7 +31,7 @@ create index if not exists push_subscriptions_user_idx
 
 alter table public.push_subscriptions enable row level security;
 
-grant select, insert, update, delete on public.push_subscriptions to authenticated;
+grant select, insert, update, delete on public.push_subscriptions to authenticated, service_role;
 
 drop policy if exists "push subscriptions are private" on public.push_subscriptions;
 create policy "push subscriptions are private"
