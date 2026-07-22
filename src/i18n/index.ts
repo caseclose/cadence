@@ -36,6 +36,13 @@ export function useLanguage(): { locale: Locale; setLocale: (next: Locale) => vo
 type Dictionary = Record<string, string>;
 const zh: Dictionary = {
   appName: 'Cadence',
+  brandTagline: '把等待从脑中卸载下来',
+  queueKicker: 'NOW IN FLIGHT',
+  statsKicker: 'PERSONAL SIGNALS',
+  templatesKicker: 'REUSABLE FLOWS',
+  stats30Days: '最近 30 天',
+  statsMedian: '实际耗时 / 初始 ETA',
+  statsP90: '偏慢任务的上界',
   whyCadence: '为什么做 Cadence？',
   introSub: '挂起任务，自适应回访',
   enableWeb: '开启网页通知',
@@ -234,6 +241,13 @@ const zh: Dictionary = {
 };
 const en: Dictionary = {
   appName: 'Cadence',
+  brandTagline: 'Unload waiting from your mind',
+  queueKicker: 'NOW IN FLIGHT',
+  statsKicker: 'PERSONAL SIGNALS',
+  templatesKicker: 'REUSABLE FLOWS',
+  stats30Days: 'Last 30 days',
+  statsMedian: 'Actual time / original ETA',
+  statsP90: 'Slower-task upper bound',
   whyCadence: 'Why Cadence?',
   introSub: 'Suspend work, revisit adaptively',
   enableWeb: 'Enable web notifications',

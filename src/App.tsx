@@ -16,6 +16,7 @@ import { MemoModal } from './components/MemoModal';
 import { LanguageToggle } from './components/LanguageToggle';
 import { useLocale, t } from './i18n';
 import { summarizeTasks } from './util/stats';
+import { formatDuration } from './util/time';
 
 export default function App() {
   useLocale();
@@ -124,11 +125,10 @@ export default function App() {
         <div className="site-header-top">
           <div className="brand">
             <div className="brand-row">
-              <span className="brand-mark" aria-hidden>
-                ◷
-              </span>
+              <span className="brand-mark" aria-hidden>◷</span>
               <span className="logo">Cadence</span>
             </div>
+            <span className="brand-tagline">{t('brandTagline')}</span>
           </div>
           <div className="site-toolbar">
             <div className="toolbar-cluster">
@@ -151,9 +151,12 @@ export default function App() {
         {user && !e2eeLocked && <><WebhookSettings /><DigestSettings /></>}
         <TaskForm onAdd={addTask} disabled={!canManageTasks} />
 
-        <section>
+        <section className="queue-section">
           <div className="section-head">
-            <h2>{t('queue')}</h2>
+            <div>
+              <span className="section-kicker">{t('queueKicker')}</span>
+              <h2>{t('queue')}</h2>
+            </div>
             {canManageTasks && (
               <div className="tools">
                 <button className="link" onClick={onExport}>
@@ -206,12 +209,24 @@ export default function App() {
         )}
 
         <section className="stats-panel">
-          <div className="section-head"><h2>{t('stats')}</h2></div>
-          <div className="task-meta"><span>{t('completed')}: {stats.completed}</span><span>{t('etaRatio')}: {stats.medianRatio === null ? '-' : `${Math.round(stats.medianRatio * 100)}%`}</span><span>{t('p90')}: {stats.p90Ratio === null ? '-' : `${Math.round(stats.p90Ratio * 100)}%`}</span></div>
+          <div className="section-head">
+            <div>
+              <span className="section-kicker">{t('statsKicker')}</span>
+              <h2>{t('stats')}</h2>
+            </div>
+          </div>
+          <div className="stat-grid">
+            <div className="stat-card"><span>{t('completed')}</span><strong>{stats.completed}</strong><small>{t('stats30Days')}</small></div>
+            <div className="stat-card"><span>{t('etaRatio')}</span><strong>{stats.medianRatio === null ? '-' : `${Math.round(stats.medianRatio * 100)}%`}</strong><small>{t('statsMedian')}</small></div>
+            <div className="stat-card"><span>{t('p90')}</span><strong>{stats.p90Ratio === null ? '-' : `${Math.round(stats.p90Ratio * 100)}%`}</strong><small>{t('statsP90')}</small></div>
+          </div>
         </section>
 
         {templates.length > 0 && (
-          <section><div className="section-head"><h2>{t('templates')}</h2></div><div className="task-list">{templates.map((template) => <div className="card task" key={template.id}><div className="task-main"><strong>{template.title}</strong></div><div className="task-actions"><button type="button" className="ghost" onClick={() => addFromTemplate(template.id)}>{t('useTemplate')}</button><button type="button" className="ghost danger" onClick={() => deleteTemplate(template.id)}>{t('delete')}</button></div></div>)}</div></section>
+          <section className="templates-section">
+            <div className="section-head"><div><span className="section-kicker">{t('templatesKicker')}</span><h2>{t('templates')}</h2></div></div>
+            <div className="template-grid">{templates.map((template) => <article className="template-card" key={template.id}><div><strong>{template.title}</strong><span>{template.strategy === 'converging' ? t('convergingShort') : t('exponentialShort')} · ETA {formatDuration(template.etaMs)}</span></div><div className="task-actions"><button type="button" className="ghost" onClick={() => addFromTemplate(template.id)}>{t('useTemplate')}</button><button type="button" className="ghost danger" onClick={() => deleteTemplate(template.id)}>{t('delete')}</button></div></article>)}</div>
+          </section>
         )}
 
         {archivedTasks.length > 0 && (
