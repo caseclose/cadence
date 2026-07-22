@@ -80,7 +80,7 @@ export function AuthBar() {
             title={
               pushOn
                 ? '关闭本设备的后台推送'
-                : '开启后台推送（关页/锁屏也可提醒；iOS 需先添加到主屏幕）'
+                : '开启后台推送（关页/锁屏也可提醒）。大陆 Chrome 可能需 VPN；国内更推荐「提醒通道」。iOS 需先添加到主屏幕'
             }
             onClick={() => void togglePush()}
           >

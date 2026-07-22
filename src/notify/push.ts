@@ -66,6 +66,23 @@ async function deleteSubscriptionRow(endpoint: string): Promise<void> {
   await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint);
 }
 
+/** True when Chrome cannot reach Google FCM (common in mainland China without VPN). */
+export function isPushServiceUnavailableError(message: string): boolean {
+  const m = message.toLowerCase();
+  // e.g. "Registration failed - push service unavailable" / "push service not available"
+  if (m.includes('push service') || m.includes('pushservice')) return true;
+  return m.includes('push') && (m.includes('not available') || m.includes('unavailable'));
+}
+
+/** Map raw PushManager errors to short Chinese copy for the AuthBar. */
+export function formatPushSubscribeError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (isPushServiceUnavailableError(msg)) {
+    return '网页推送不可用（大陆 Chrome 常无法连接 Google 推送）。可开 VPN 后重试，或改用「提醒通道」配置飞书/企微/钉钉。';
+  }
+  return `订阅推送失败：${msg || '未知错误'}`;
+}
+
 /**
  * Request notification permission (must be called from a user gesture on iOS),
  * subscribe to Web Push, and upsert the subscription for `userId`.
@@ -99,8 +116,7 @@ export async function subscribeToPush(userId: string): Promise<string | null> {
         applicationServerKey: urlBase64ToUint8Array(publicKey) as BufferSource,
       });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      return `订阅推送失败：${msg}`;
+      return formatPushSubscribeError(err);
     }
   }
 
