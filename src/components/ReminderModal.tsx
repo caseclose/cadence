@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { useLocale, t } from '../i18n';
 import { Action, Task } from '../scheduler/types';
-import { parseWhen, formatDuration, formatFireAt } from '../util/time';
+import { parseWhen, formatDuration, formatFireAt, formatRelative } from '../util/time';
 import { WhenFormatGuide } from './WhenFormatGuide';
 import { MarkdownView } from './MarkdownView';
 import { TermTip } from './TermTip';
+
+const SNOOZE_10M_MS = 10 * 60_000;
+const SNOOZE_1H_MS = 60 * 60_000;
 
 interface Props {
   task: Task;
@@ -28,6 +31,12 @@ export function ReminderModal({ task, onResolve, onClose, onOpenMemo }: Props) {
     next.setDate(next.getDate() + 1);
     next.setHours(9, 0, 0, 0);
     return next.getTime();
+  };
+
+  const relativeSnoozeTitle = (durationMs: number) => {
+    const now = Date.now();
+    const fireAt = Math.max(now, task.nextFireAt) + durationMs;
+    return `${t('quickSnoozeHint')} → ${formatRelative(fireAt, now)}`;
   };
 
   const hint =
@@ -86,13 +95,28 @@ export function ReminderModal({ task, onResolve, onClose, onOpenMemo }: Props) {
         <div className="modal-snooze">
           <TermTip className="modal-snooze-label" hintKey="quickSnoozeHint">{t('quickSnooze')}</TermTip>
           <div className="modal-snooze-chips">
-            <button type="button" className="snooze-chip" title={t('quickSnoozeHint')} onClick={() => act({ type: 'snooze', durationMs: 10 * 60_000 })}>
+            <button
+              type="button"
+              className="snooze-chip"
+              title={relativeSnoozeTitle(SNOOZE_10M_MS)}
+              onClick={() => act({ type: 'snooze', durationMs: SNOOZE_10M_MS })}
+            >
               {t('snooze10m')}
             </button>
-            <button type="button" className="snooze-chip" title={t('quickSnoozeHint')} onClick={() => act({ type: 'snooze', durationMs: 60 * 60_000 })}>
+            <button
+              type="button"
+              className="snooze-chip"
+              title={relativeSnoozeTitle(SNOOZE_1H_MS)}
+              onClick={() => act({ type: 'snooze', durationMs: SNOOZE_1H_MS })}
+            >
               {t('snooze1h')}
             </button>
-            <button type="button" className="snooze-chip" title={t('quickSnoozeHint')} onClick={() => act({ type: 'snooze', fireAt: tomorrowMorningFireAt() })}>
+            <button
+              type="button"
+              className="snooze-chip"
+              title={t('quickSnoozeHint')}
+              onClick={() => act({ type: 'snooze', fireAt: tomorrowMorningFireAt() })}
+            >
               {t('snoozeTomorrow')}
             </button>
           </div>

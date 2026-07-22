@@ -6,7 +6,7 @@ export const DAY = 24 * HOUR;
 
 /** Human-friendly compact duration, e.g. 2d 3h, 1h 15m, 9m. */
 export function formatDuration(ms: number): string {
-  if (ms < 0) ms = 0;
+  if (!Number.isFinite(ms) || ms < 0) ms = 0;
   const days = Math.floor(ms / DAY);
   const afterDays = ms % DAY;
   const h = Math.floor(afterDays / HOUR);
@@ -16,8 +16,19 @@ export function formatDuration(ms: number): string {
   const parts: string[] = [];
   if (days > 0) parts.push(`${days}d`);
   if (h > 0) parts.push(m > 0 && days === 0 ? `${h}h ${m}m` : `${h}h`);
-  else if (m > 0) parts.push(s > 0 && m < 5 && days === 0 ? `${m}m ${s}s` : `${m}m`);
-  else if (days === 0) parts.push(`${s}s`);
+  else if (m > 0) {
+    // Below 5m keep seconds; at 5m+ omit seconds but round up partial minutes
+    // so a fresh +10m snooze does not immediately read as 9m.
+    if (s > 0 && m < 5 && days === 0) {
+      parts.push(`${m}m ${s}s`);
+    } else if (days === 0 && s >= 30) {
+      const rounded = m + 1;
+      if (rounded >= 60) parts.push('1h');
+      else parts.push(`${rounded}m`);
+    } else {
+      parts.push(`${m}m`);
+    }
+  } else if (days === 0) parts.push(`${s}s`);
 
   return parts.join(' ') || '0s';
 }

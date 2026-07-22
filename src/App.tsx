@@ -116,7 +116,11 @@ export default function App() {
 
   useEffect(() => {
     const due = activeTasks.filter((task) => task.nextFireAt <= now).length;
-    document.title = due ? `(${due}) Cadence` : activeTasks.length ? `(${Math.max(0, Math.ceil((activeTasks[0].nextFireAt - now) / 60_000))}m) Cadence` : 'Cadence';
+    document.title = due
+      ? `(${due}) Cadence`
+      : activeTasks.length
+        ? `(${formatDuration(Math.max(0, activeTasks[0].nextFireAt - now))}) Cadence`
+        : 'Cadence';
     return () => { document.title = 'Cadence'; };
   }, [activeTasks, now]);
 

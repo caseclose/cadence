@@ -21,6 +21,8 @@ export interface Task {
   priority: number;
   createdAt: number;
   updatedAt: number;
+  /** Deterministic tie-breaker for concurrent updates with the same timestamp. */
+  revision?: string;
   /** Original ETA, preserved when the task is re-estimated. */
   initialEtaMs?: number;
   /** Set once when the task is completed. */

@@ -17,6 +17,7 @@ export interface TaskRow {
   priority: number;
   created_at: number;
   updated_at: number;
+  revision?: string | null;
   completed_at: number | null;
   /** Present when task body is E2EE; plaintext columns are placeholders. */
   enc?: string | null;
@@ -47,6 +48,7 @@ export function rowToTaskPlain(row: TaskRow): Task {
     priority: asNum(row.priority),
     createdAt: asNum(row.created_at),
     updatedAt: asNum(row.updated_at),
+    revision: row.revision ?? undefined,
     completedAt:
       row.completed_at === null || row.completed_at === undefined
         ? undefined
@@ -59,7 +61,16 @@ export async function rowToTask(row: TaskRow, dek: CryptoKey | null): Promise<Ta
     if (!dek) return null;
     try {
       const task = await decryptTaskPayload(dek, row.enc!);
-      return { ...task, id: row.id, updatedAt: asNum(row.updated_at) };
+      // Timing/state columns are plaintext for server push — prefer them over
+      // enc so a divergent ciphertext cannot show a stale nextFireAt in the UI.
+      return {
+        ...task,
+        id: row.id,
+        updatedAt: asNum(row.updated_at),
+        revision: row.revision ?? task.revision,
+        nextFireAt: asNum(row.next_fire_at),
+        state: row.state,
+      };
     } catch {
       return null;
     }
@@ -82,6 +93,7 @@ export function taskToRowPlain(task: Task, userId: string): TaskRow {
     priority: task.priority,
     created_at: task.createdAt,
     updated_at: task.updatedAt,
+    revision: task.revision ?? '',
     completed_at: task.completedAt ?? null,
     enc: null,
     webhook_title: null,
@@ -113,6 +125,7 @@ export async function taskToRow(
     priority: 0,
     created_at: task.createdAt,
     updated_at: task.updatedAt,
+    revision: task.revision ?? '',
     completed_at: null,
     enc,
     webhook_title: includeWebhookContent ? task.title : null,

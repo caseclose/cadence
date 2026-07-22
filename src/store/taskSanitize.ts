@@ -44,6 +44,7 @@ export function sanitizeTasks(data: unknown): Task[] {
       priority: asNum(item.priority),
       createdAt: asNum(item.createdAt),
       updatedAt: asNum(item.updatedAt),
+      ...(typeof item.revision === 'string' ? { revision: item.revision } : {}),
       ...(item.completedAt === undefined || item.completedAt === null ? {} : { completedAt: asNum(item.completedAt) }),
     });
   }

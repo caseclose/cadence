@@ -138,13 +138,16 @@ export function schedule(
       }
       // Relative snooze (+10m / +1h): extend from the later of now and the
       // scheduled fire — never shrink remaining time when the modal is opened early.
-      // Floor duration at minIntervalMs only; do NOT cap at maxIntervalMs.
+      // Floor duration at minIntervalMs only; do NOT cap at maxIntervalMs / apply jitter
+      // (unlike no_resources). Overdue tasks must use `now`, otherwise
+      // nextFireAt + 10m would under-shoot (e.g. overdue 4m → shows ~6m left).
       const durationMs = 'durationMs' in action ? action.durationMs : cfg.minIntervalMs;
       const duration = Math.max(durationMs, cfg.minIntervalMs);
+      const baseFireAt = Math.max(now, task.nextFireAt);
       return {
         ...base,
         state: 'snoozed',
-        nextFireAt: Math.max(now, task.nextFireAt) + duration,
+        nextFireAt: baseFireAt + duration,
       };
     }
 

@@ -20,6 +20,7 @@ import { rowToTask, taskToRow, TaskRow } from './mapping';
 import { mapAuthError } from './authErrors';
 import { usernameToEmail, validateUsername } from './username';
 import { sanitizeTasks } from './taskSanitize';
+import { isNewerTask, mergeTasks } from './taskMerge';
 import { ensurePushSubscription, subscribeToPush, unsubscribeFromPush } from '../notify/push';
 
 const LS_TASKS_LEGACY = 'cadence.tasks.v1';
@@ -54,7 +55,8 @@ function saveTasks(tasks: Task[], uid: string | null) {
 function localTasksForSync(get: () => StoreState, uid: string): Task[] {
   const cached = loadTasksForUser(uid);
   if (get().user?.id !== uid) return cached;
-  return mergeTasks(cached, sanitizeTasks(get().tasks));
+  // In-memory tasks are primary so a same-ms remote/cache echo cannot roll back.
+  return mergeTasks(sanitizeTasks(get().tasks), cached);
 }
 
 function loadLocal<T>(key: string, fallback: T): T {
@@ -144,21 +146,34 @@ interface StoreState {
 
 async function upsertRemote(task: Task, userId: string) {
   if (!supabase) return;
+  const epoch = (remoteWriteEpoch.get(task.id) ?? 0) + 1;
+  remoteWriteEpoch.set(task.id, epoch);
   const { data: hooks } = await supabase
     .from('notification_webhooks')
     .select('include_content')
     .eq('user_id', userId)
     .eq('enabled', true);
+  // A newer applyAction/sync may have queued another upsert while we awaited.
+  if (remoteWriteEpoch.get(task.id) !== epoch) return;
   const includeWebhookContent = (hooks ?? []).some(
     (hook) => hook.include_content === true,
   );
   const row = await taskToRow(task, userId, getDek(), includeWebhookContent);
-  await supabase.from('tasks').upsert(row);
+  if (remoteWriteEpoch.get(task.id) !== epoch) return;
+  // The RPC applies the same version ordering in PostgreSQL. A client-side
+  // epoch can cancel pre-write work, but cannot stop a request already sent.
+  const { error } = await supabase.rpc('upsert_task_if_newer', { p_task: row });
+  if (error) console.error('upsert task failed', error.message);
 }
 
-async function deleteRemote(id: string) {
+async function deleteRemote(id: string, version: Pick<Task, 'updatedAt' | 'revision'>) {
   if (!supabase) return;
-  await supabase.from('tasks').delete().eq('id', id);
+  const { error } = await supabase.rpc('delete_task_if_newer', {
+    p_id: id,
+    p_updated_at: version.updatedAt,
+    p_revision: version.revision ?? '',
+  });
+  if (error) console.error('delete task failed', error.message);
 }
 
 async function upsertTemplateRemote(template: TaskTemplate, userId: string) {
@@ -203,15 +218,17 @@ let realtimeChannel: RealtimeChannel | null = null;
 let realtimeUid: string | null = null;
 /** When set, auth listener waits so it does not race password unlock. */
 let e2eeUnlockInFlight: Promise<string | null> | null = null;
+/** Per-task upsert generation so an older in-flight write cannot overwrite a newer one. */
+const remoteWriteEpoch = new Map<string, number>();
 
-function mergeTasks(local: Task[], remote: Task[]): Task[] {
-  const byId = new Map<string, Task>();
-  for (const t of local) byId.set(t.id, t);
-  for (const t of remote) {
-    const prev = byId.get(t.id);
-    if (!prev || t.updatedAt >= prev.updatedAt) byId.set(t.id, t);
-  }
-  return sanitizeTasks([...byId.values()]);
+function stampTask(task: Task): Task {
+  return {
+    ...task,
+    // Clock resolution is only milliseconds; keep one device's rapid edits
+    // strictly ordered before the cross-device revision tie-breaker is needed.
+    updatedAt: Math.max(Date.now(), task.updatedAt + 1),
+    revision: uuid(),
+  };
 }
 
 async function pullRemoteTasks(uid: string): Promise<Task[]> {
@@ -242,7 +259,7 @@ async function applyIncomingRow(
   const idx = cur.findIndex((t) => t.id === incoming.id);
   let next: Task[];
   if (idx === -1) next = [...cur, incoming];
-  else if (incoming.updatedAt >= cur[idx].updatedAt) {
+  else if (isNewerTask(incoming, cur[idx])) {
     next = [...cur];
     next[idx] = incoming;
   } else next = cur;
@@ -419,7 +436,7 @@ export const useStore = create<StoreState>((set, get) => ({
     if (get().e2eeLocked) return;
 
     const now = Date.now();
-    const task = createTask({ id: uuid(), ...input }, now);
+    const task = { ...createTask({ id: uuid(), ...input }, now), revision: uuid() };
     const next = [...get().tasks, task];
     const event = { id: uuid(), taskId: task.id, type: 'created' as const, at: now };
     const events = [...get().events, event];
@@ -436,7 +453,7 @@ export const useStore = create<StoreState>((set, get) => ({
     let updated: Task | null = null;
     const next = get().tasks.map((t) => {
       if (t.id !== id) return t;
-      updated = schedule(t, action, now, cfg);
+      updated = stampTask(schedule(t, action, now, cfg));
       return updated;
     });
     const eventType = action.type === 'no_resources' ? 'snooze' : action.type;
@@ -459,11 +476,10 @@ export const useStore = create<StoreState>((set, get) => ({
     let updated: Task | null = null;
     const next = get().tasks.map((t) => {
       if (t.id !== id) return t;
-      updated = {
+      updated = stampTask({
         ...t,
         note: trimmed || undefined,
-        updatedAt: Date.now(),
-      };
+      });
       return updated;
     });
     set({ tasks: next });
@@ -479,7 +495,7 @@ export const useStore = create<StoreState>((set, get) => ({
     let updated: Task | null = null;
     const next = get().tasks.map((t) => {
       if (t.id !== id) return t;
-      updated = { ...t, title: trimmed, updatedAt: Date.now() };
+      updated = stampTask({ ...t, title: trimmed });
       return updated;
     });
     set({ tasks: next });
@@ -498,10 +514,13 @@ export const useStore = create<StoreState>((set, get) => ({
 
   deleteTask: (id) => {
     if (get().e2eeLocked) return;
-    const next = get().tasks.filter((t) => t.id !== id);
+    const task = get().tasks.find((item) => item.id === id);
+    if (!task) return;
+    const next = get().tasks.filter((item) => item.id !== id);
     set({ tasks: next });
-    saveTasks(next, get().user?.id ?? null);
-    if (get().user?.id) void deleteRemote(id);
+    const uid = get().user?.id;
+    saveTasks(next, uid ?? null);
+    if (uid) void deleteRemote(id, stampTask(task));
   },
 
   setConfig: (patch) => {

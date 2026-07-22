@@ -1,9 +1,27 @@
 import { describe, expect, it } from 'vitest';
-import { formatFireAt, parseClock, parseDuration, parseWhen } from './time';
+import { formatDuration, formatFireAt, formatRelative, parseClock, parseDuration, parseWhen } from './time';
+import { setLocale } from '../i18n';
 
 const HOUR = 60 * 60_000;
 const MIN = 60_000;
 const DAY = 24 * HOUR;
+
+describe('formatDuration / formatRelative', () => {
+  it('shows a full +10m snooze as 10m, not a floored 9m after a few seconds', () => {
+    expect(formatDuration(10 * MIN)).toBe('10m');
+    expect(formatDuration(10 * MIN - 20_000)).toBe('10m');
+    expect(formatDuration(6 * MIN)).toBe('6m');
+  });
+
+  it('formatRelative after overdue+10m reads as ~10m left', () => {
+    setLocale('zh');
+    const now = 1_000_000;
+    const overdueFireAt = now - 4 * MIN;
+    // Bug path without Math.max(now, nextFireAt): overdueFireAt + 10m → 6m left.
+    expect(formatRelative(overdueFireAt + 10 * MIN, now)).toBe('6m后');
+    expect(formatRelative(now + 10 * MIN, now)).toBe('10m后');
+  });
+});
 
 describe('parseDuration', () => {
   it('parses h/m/s/d and bare minutes', () => {

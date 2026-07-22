@@ -47,4 +47,21 @@ describe('mapping', () => {
     },
     15_000,
   );
+
+  it(
+    'encrypted row prefers plaintext next_fire_at over stale enc payload',
+    async () => {
+      const { dek } = await createE2EEAccount('mapping-stale-enc');
+      const row = await taskToRow(sampleTask, 'user-1', dek);
+      const freshFireAt = sampleTask.nextFireAt + 10 * 60_000;
+      row.next_fire_at = freshFireAt;
+      row.state = 'snoozed';
+
+      const back = await rowToTask(row, dek);
+      expect(back?.nextFireAt).toBe(freshFireAt);
+      expect(back?.state).toBe('snoozed');
+      expect(back?.title).toBe('私密任务标题');
+    },
+    15_000,
+  );
 });

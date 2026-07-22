@@ -154,6 +154,34 @@ describe('explicit snooze', () => {
     expect(oneHour.nextFireAt).toBe(now + 60 * MIN);
   });
 
+  it('when overdue by several minutes, +10m still lands at now+10m (not nextFireAt+10m)', () => {
+    // Regression: overdue 4m + duration onto nextFireAt would show ~6m left.
+    const createdAt = 0;
+    const task = createTask(
+      { id: 's', title: 'wait', strategy: 'converging', etaMs: 60 * MIN },
+      createdAt,
+    );
+    const now = task.nextFireAt + 4 * MIN;
+    const snoozed = schedule(
+      task,
+      { type: 'snooze', durationMs: 10 * MIN },
+      now,
+      DEFAULT_BACKOFF,
+      () => 0, // would apply -100% jitter if snooze wrongly used applyJitter
+    );
+    expect(snoozed.nextFireAt).toBe(now + 10 * MIN);
+    expect(snoozed.nextFireAt - now).toBe(10 * MIN);
+    expect(snoozed.nextFireAt).not.toBe(task.nextFireAt + 10 * MIN);
+  });
+
+  it('relative snooze ignores jitterFraction entirely', () => {
+    const task = createTask({ id: 's', title: 'wait', strategy: 'converging', etaMs: 60 * MIN }, 0);
+    const now = task.nextFireAt + MIN;
+    const cfg = { ...DEFAULT_BACKOFF, jitterFraction: 0.5 };
+    const snoozed = schedule(task, { type: 'snooze', durationMs: 10 * MIN }, now, cfg, () => 0);
+    expect(snoozed.nextFireAt).toBe(now + 10 * MIN);
+  });
+
   it('when not yet due, adds duration onto nextFireAt instead of resetting to now', () => {
     const createdAt = 1_000_000;
     const task = createTask(

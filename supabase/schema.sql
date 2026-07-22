@@ -18,6 +18,7 @@ create table if not exists public.tasks (
   priority int not null default 0,
   created_at bigint not null,
   updated_at bigint not null,
+  revision text not null default '',
   completed_at bigint,
   -- E2EE ciphertext for task body (title/note/etc.). When set, plaintext
   -- columns are placeholders except next_fire_at / state (needed for server push);
@@ -28,6 +29,13 @@ create table if not exists public.tasks (
   webhook_note text,
   -- Last next_fire_at value for which a Web Push was already sent (dedupe).
   notified_fire_at bigint
+);
+
+create table if not exists public.task_tombstones (
+  id uuid primary key,
+  user_id uuid not null references auth.users (id) on delete cascade,
+  updated_at bigint not null,
+  revision text not null default ''
 );
 
 create index if not exists tasks_user_idx on public.tasks (user_id);
