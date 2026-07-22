@@ -182,40 +182,53 @@ Deno.serve(async (req) => {
     const usersWithDue = new Set(due.map((t) => t.user_id));
 
     for (const userId of usersWithDue) {
-      if (pushEnabled) {
-        for (const sub of subsByUser.get(userId) ?? []) {
-          try {
-            await webpush.sendNotification(
-              {
-                endpoint: sub.endpoint,
-                keys: { p256dh: sub.p256dh, auth: sub.auth },
-              },
-              pushPayload,
-            );
-            pushSent += 1;
-          } catch (err) {
-            const status = (err as { statusCode?: number })?.statusCode;
-            if (status === 404 || status === 410) {
-              deadEndpoints.push(sub.endpoint);
-            } else {
-              console.error('webpush failed', err);
-            }
+      const userSubs = pushEnabled ? subsByUser.get(userId) ?? [] : [];
+      const userHooks = hooksByUser.get(userId) ?? [];
+      let userDelivered = false;
+
+      for (const sub of userSubs) {
+        try {
+          await webpush.sendNotification(
+            {
+              endpoint: sub.endpoint,
+              keys: { p256dh: sub.p256dh, auth: sub.auth },
+            },
+            pushPayload,
+          );
+          pushSent += 1;
+          userDelivered = true;
+        } catch (err) {
+          const status = (err as { statusCode?: number })?.statusCode;
+          if (status === 404 || status === 410) {
+            deadEndpoints.push(sub.endpoint);
+          } else {
+            console.error('webpush failed', err);
           }
         }
       }
 
-      for (const hook of hooksByUser.get(userId) ?? []) {
+      for (const hook of userHooks) {
         try {
           const r = await sendChatWebhook(hook, REMINDER_TEXT);
-          if (r.ok) webhookSent += 1;
-          else console.error('webhook failed', hook.provider, r.detail);
+          if (r.ok) {
+            webhookSent += 1;
+            userDelivered = true;
+          } else {
+            console.error('webhook failed', hook.provider, r.detail);
+          }
         } catch (err) {
           console.error('webhook failed', hook.provider, err);
         }
       }
 
-      for (const t of due.filter((d) => d.user_id === userId)) {
-        notifiedTaskIds.push({ id: t.id, next_fire_at: t.next_fire_at });
+      // Mark tasks notified when we actually delivered, OR when the user has no
+      // channels at all (avoid retry storms). If channels exist but all failed,
+      // leave unmarked so the next cron tick retries.
+      const hasChannels = userSubs.length > 0 || userHooks.length > 0;
+      if (userDelivered || !hasChannels) {
+        for (const t of due.filter((d) => d.user_id === userId)) {
+          notifiedTaskIds.push({ id: t.id, next_fire_at: t.next_fire_at });
+        }
       }
     }
 
