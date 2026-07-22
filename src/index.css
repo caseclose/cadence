@@ -1402,35 +1402,32 @@ button.link:hover:not(:disabled) {
   flex: 1;
 }
 
-/* ── Memo drawer + Markdown ───────────────────────────────────── */
+/* ── Memo modal + Markdown ────────────────────────────────────── */
 .memo-backdrop {
   z-index: 60;
-  align-items: stretch;
-  justify-content: flex-end;
-  padding: 0;
 }
 
-.memo-drawer {
-  max-width: 560px;
-  width: min(560px, 100%);
-  height: 100%;
-  max-height: 100%;
-  border-radius: 0;
+.memo-modal {
+  width: min(720px, 92vw);
+  max-width: none;
+  height: min(80vh, 720px);
+  max-height: min(80vh, 720px);
   display: flex;
   flex-direction: column;
-  padding: 22px 20px;
-  animation: slide-in-right 0.22s ease;
+  padding: 24px;
+  animation: slide-up 0.25s ease;
 }
 
-.memo-drawer-head {
+.memo-modal-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 14px;
+  flex-shrink: 0;
 }
 
-.memo-drawer-task {
+.memo-modal-task {
   color: var(--muted);
   font-size: 13px;
   margin-top: 4px;
@@ -1446,6 +1443,7 @@ button.link:hover:not(:disabled) {
   border-radius: 10px;
   background: var(--panel-2);
   border: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .memo-tabs button {
@@ -1466,6 +1464,13 @@ button.link:hover:not(:disabled) {
   box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.06));
 }
 
+.memo-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .memo-editor,
 .memo-preview,
 .memo-empty {
@@ -1477,14 +1482,15 @@ button.link:hover:not(:disabled) {
 .memo-editor {
   resize: none;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 13.5px;
-  line-height: 1.55;
+  font-size: 14px;
+  line-height: 1.6;
   border-radius: 12px;
+  overflow: auto;
 }
 
 .memo-preview {
   overflow: auto;
-  padding: 14px 16px;
+  padding: 16px 18px;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--bg-elevated);
@@ -1501,7 +1507,7 @@ button.link:hover:not(:disabled) {
   padding: 24px;
 }
 
-.memo-drawer-foot {
+.memo-modal-foot {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1509,6 +1515,7 @@ button.link:hover:not(:disabled) {
   margin-top: 14px;
   padding-top: 14px;
   border-top: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .memo-hint {
@@ -1524,8 +1531,8 @@ button.link:hover:not(:disabled) {
 
 .md-view {
   color: var(--text);
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 15px;
+  line-height: 1.65;
   word-break: break-word;
 }
 
@@ -1596,7 +1603,7 @@ button.link:hover:not(:disabled) {
 .md-view pre code {
   background: transparent;
   padding: 0;
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.5;
 }
 
@@ -1610,17 +1617,6 @@ button.link:hover:not(:disabled) {
   border: 0;
   border-top: 1px solid var(--border);
   margin: 1em 0;
-}
-
-@keyframes slide-in-right {
-  from {
-    transform: translateX(16px);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
 }
 
 /* ── Animations ───────────────────────────────────────────────── */
@@ -1753,13 +1749,14 @@ button.link:hover:not(:disabled) {
     border-radius: 16px;
   }
 
-  .memo-drawer {
-    max-width: 100%;
-    width: 100%;
+  .memo-modal {
+    width: min(100%, calc(100vw - 24px));
+    height: min(92vh, 100%);
+    max-height: min(92vh, 100%);
     padding: 18px 16px;
   }
 
-  .memo-drawer-foot {
+  .memo-modal-foot {
     flex-direction: column;
     align-items: stretch;
   }

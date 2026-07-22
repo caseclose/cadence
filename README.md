@@ -15,12 +15,20 @@
 
 护栏：最小间隔防刷屏、最大间隔封顶、±10% jitter 避免多任务撞车、过期加速。完整原理与调度动作见 **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**。
 
+## 主要能力
+
+- **挂起 + 自适应提醒**：到点四选一（完成 / 还没好 / 没空看 / 重估）
+- **备忘录（Markdown）**：任务可附带长上下文（命令、链接、检查清单）；居中宽模态编辑/预览，到点提醒时一并展示；云端同步时随任务 E2EE 加密
+- **后台提醒**：Web Push；国内推荐飞书 / 企微 / 钉钉 Webhook（见 [docs/PUSH.md](docs/PUSH.md)）
+- **可选云同步**：Supabase Auth + Realtime；未配置时纯本地 localStorage
+
 ## 技术栈
 
 - React + Vite + TypeScript，纯静态前端
-- 提醒：浏览器 Web Notification + Web Audio 铃声（网页开着时生效）
+- 提醒：浏览器 Web Notification + Web Audio 铃声（网页开着时生效）；可选后台 Web Push / 群机器人 Webhook
 - 跨设备同步（可选）：Supabase（Auth + Postgres + Realtime）；未配置时退化为纯本地 localStorage
-- 登录用户任务内容**端到端加密**后再上云，云端只存密文
+- 登录用户任务内容（含备忘录）**端到端加密**后再上云，云端只存密文
+- Markdown：`marked` 渲染 + `DOMPurify` 消毒
 
 ## 快速开始
 

@@ -11,7 +11,7 @@ import { ThemeToggle } from './components/ThemeToggle';
 import { ProjectIntro } from './components/ProjectIntro';
 import { UnlockVault } from './components/UnlockVault';
 import { WebhookSettings } from './components/WebhookSettings';
-import { MemoDrawer } from './components/MemoDrawer';
+import { MemoModal } from './components/MemoModal';
 
 export default function App() {
   const {
@@ -200,7 +200,7 @@ export default function App() {
         <ReminderModal task={currentDue} onResolve={applyAction} onClose={closeCurrent} />
       )}
       {memoTask && (
-        <MemoDrawer
+        <MemoModal
           task={memoTask}
           onSave={updateTaskNote}
           onClose={() => setMemoId(null)}

@@ -9,11 +9,14 @@ src/
 ├── App.tsx                 # 根组件，装配布局与全局状态
 ├── main.tsx                # 入口，挂载 React + ErrorBoundary
 ├── components/             # UI 组件（无业务逻辑，靠 store 驱动）
-│   ├── AuthBar.tsx         #   登录/注册/登出
-│   ├── TaskForm.tsx        #   挂起新任务
-│   ├── TaskCard.tsx        #   单个挂起任务
-│   ├── ReminderModal.tsx   #   到点提醒的四选一弹窗
+│   ├── AuthBar.tsx         #   登录/注册/登出、Web Push 开关
+│   ├── TaskForm.tsx        #   挂起新任务（可写 Markdown 备忘录）
+│   ├── TaskCard.tsx        #   单个挂起任务（摘要 + 打开备忘录）
+│   ├── MemoModal.tsx       #   备忘录居中宽模态（编辑 / 预览）
+│   ├── MarkdownView.tsx    #   安全 Markdown 渲染
+│   ├── ReminderModal.tsx   #   到点提醒的四选一弹窗（含备忘录）
 │   ├── UnlockVault.tsx     #   刷新后重新输入密码解锁 E2EE
+│   ├── WebhookSettings.tsx #   飞书 / 企微 / 钉钉 Webhook
 │   ├── ProjectIntro.tsx    #   可折叠的项目介绍
 │   ├── ErrorBoundary.tsx   #   兜底渲染，防白屏
 │   ├── ThemeToggle.tsx / WhenFormatGuide.tsx
@@ -33,9 +36,12 @@ src/
 │   └── keyring.ts          #   会话内 DEK 管理
 ├── notify/
 │   ├── index.ts            #   本地通道：Web Notification + Web Audio
-│   └── push.ts             #   Web Push 订阅 / 退订（后台推送）
+│   ├── push.ts             #   Web Push 订阅 / 退订（后台推送）
+│   └── webhooks.ts         #   群机器人 Webhook CRUD / 测试
 ├── theme/                 # 主题定义与 hook
-└── util/time.ts           # 时间解析/格式化
+└── util/
+    ├── time.ts             #   时间解析/格式化（含中文时长）
+    └── markdown.ts         #   Markdown 渲染 + 摘要截断
 ```
 
 根目录与 `public/` 相关：
@@ -79,6 +85,15 @@ src/
 护栏：`minInterval` 防刷屏、`maxInterval` 封顶、±10% jitter 避免多任务提醒撞车、过期加速。
 
 引擎是纯函数，见 [`../src/scheduler/backoff.ts`](../src/scheduler/backoff.ts)，测试见 [`../src/scheduler/backoff.test.ts`](../src/scheduler/backoff.test.ts)。
+
+## 备忘录（Markdown）
+
+任务的 `note` 字段可存较长上下文（命令、链接、检查清单），支持 Markdown：
+
+- 创建时在 `TaskForm` 多行输入；日常在 `MemoModal` 居中宽模态里编辑 / 预览
+- 队列卡片只显示一行摘要（`util/markdown.noteSummary`），点开看全文
+- 到点提醒 `ReminderModal` 会渲染备忘录，方便对照上下文做四选一
+- 渲染：`marked` + `DOMPurify`（`MarkdownView` / `util/markdown.ts`）；上云时随任务 E2EE 加密
 
 ## 认证与同步
 

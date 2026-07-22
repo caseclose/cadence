@@ -9,9 +9,9 @@ interface Props {
 }
 
 /**
- * Full memo surface for a task: edit Markdown context, preview rendered output.
+ * Wide centered memo modal: edit Markdown context, preview rendered output.
  */
-export function MemoDrawer({ task, onSave, onClose }: Props) {
+export function MemoModal({ task, onSave, onClose }: Props) {
   const [draft, setDraft] = useState(task.note ?? '');
   const [tab, setTab] = useState<'edit' | 'preview'>('edit');
 
@@ -38,17 +38,17 @@ export function MemoDrawer({ task, onSave, onClose }: Props) {
   return (
     <div className="modal-backdrop memo-backdrop" onClick={onClose}>
       <div
-        className="modal memo-drawer"
+        className="modal memo-modal"
         role="dialog"
-        aria-labelledby="memo-drawer-title"
+        aria-labelledby="memo-modal-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="memo-drawer-head">
+        <div className="memo-modal-head">
           <div>
-            <div id="memo-drawer-title" className="modal-title">
+            <div id="memo-modal-title" className="modal-title">
               备忘录
             </div>
-            <div className="memo-drawer-task">{task.title}</div>
+            <div className="memo-modal-task">{task.title}</div>
           </div>
           <button type="button" className="ghost" onClick={onClose}>
             关闭
@@ -76,24 +76,26 @@ export function MemoDrawer({ task, onSave, onClose }: Props) {
           </button>
         </div>
 
-        {tab === 'edit' ? (
-          <textarea
-            className="memo-editor"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder={
-              '支持 Markdown：\n# 标题\n- 检查清单\n`命令`\n```\n代码块\n```\n[链接](https://…)'
-            }
-            spellCheck={false}
-            autoFocus
-          />
-        ) : draft.trim() ? (
-          <MarkdownView source={draft} className="memo-preview" />
-        ) : (
-          <div className="memo-empty">还没有内容。切到「编辑」写点上下文吧。</div>
-        )}
+        <div className="memo-body">
+          {tab === 'edit' ? (
+            <textarea
+              className="memo-editor"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder={
+                '支持 Markdown：\n# 标题\n- 检查清单\n`命令`\n```\n代码块\n```\n[链接](https://…)'
+              }
+              spellCheck={false}
+              autoFocus
+            />
+          ) : draft.trim() ? (
+            <MarkdownView source={draft} className="memo-preview" />
+          ) : (
+            <div className="memo-empty">还没有内容。切到「编辑」写点上下文吧。</div>
+          )}
+        </div>
 
-        <div className="memo-drawer-foot">
+        <div className="memo-modal-foot">
           <span className="memo-hint">支持标题、列表、代码块、链接</span>
           <div className="memo-foot-actions">
             <button type="button" className="ghost" onClick={onClose}>
