@@ -350,6 +350,19 @@ body {
   padding-inline-start: 4px;
 }
 
+.auth-msg-dismiss {
+  cursor: pointer;
+  border-radius: 6px;
+  outline: none;
+}
+
+.auth-msg-dismiss:hover,
+.auth-msg-dismiss:focus-visible {
+  opacity: 0.85;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 /* --- Webhook settings (Feishu / WeCom / DingTalk) --- */
 
 .webhook-card {

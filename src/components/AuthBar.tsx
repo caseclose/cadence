@@ -90,7 +90,23 @@ export function AuthBar() {
         <button type="button" className="btn-sm btn-ghost" onClick={() => void signOut()}>
           退出
         </button>
-        {pushMsg && <p className="auth-msg auth-msg-inline">{pushMsg}</p>}
+        {pushMsg && (
+          <p
+            className="auth-msg auth-msg-inline auth-msg-dismiss"
+            role="button"
+            tabIndex={0}
+            title="点击关闭"
+            onClick={() => setPushMsg(null)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setPushMsg(null);
+              }
+            }}
+          >
+            {pushMsg}
+          </p>
+        )}
       </div>
     );
   }
