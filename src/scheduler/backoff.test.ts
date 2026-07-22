@@ -141,16 +141,41 @@ describe('reestimate and done', () => {
 
 
 describe('explicit snooze', () => {
-  it('uses the requested duration without jitter or consuming attempts', () => {
+  it('uses now + duration without jitter or consuming attempts', () => {
     const task = createTask({ id: 's', title: 'wait', strategy: 'converging', etaMs: 60 * MIN }, 0);
-    const snoozed = schedule(task, { type: 'snooze', durationMs: 60 * MIN }, 123, DEFAULT_BACKOFF, () => 0);
-    expect(snoozed.nextFireAt).toBe(123 + 60 * MIN);
-    expect(snoozed.attempts).toBe(0);
+    const now = 1_700_000_000_000;
+    const tenMin = schedule(task, { type: 'snooze', durationMs: 10 * MIN }, now, DEFAULT_BACKOFF, () => 0);
+    expect(tenMin.nextFireAt).toBe(now + 10 * MIN);
+    expect(tenMin.state).toBe('snoozed');
+    expect(tenMin.attempts).toBe(0);
+    expect(tenMin.etaMs).toBe(60 * MIN);
+
+    const oneHour = schedule(task, { type: 'snooze', durationMs: 60 * MIN }, now, DEFAULT_BACKOFF, () => 0);
+    expect(oneHour.nextFireAt).toBe(now + 60 * MIN);
   });
 
-  it('clamps an explicit snooze to scheduler bounds', () => {
+  it('floors an explicit snooze to minIntervalMs only', () => {
     const task = createTask({ id: 's', title: 'wait', strategy: 'converging', etaMs: 60 * MIN }, 0);
     const snoozed = schedule(task, { type: 'snooze', durationMs: 1 }, 0);
     expect(snoozed.nextFireAt).toBe(DEFAULT_BACKOFF.minIntervalMs);
+  });
+
+  it('does not cap an explicit snooze at maxIntervalMs (e.g. tomorrow morning)', () => {
+    const task = createTask({ id: 's', title: 'wait', strategy: 'converging', etaMs: 60 * MIN }, 0);
+    // 22:00 -> tomorrow 09:00 is 11h, well above the default 4h backoff ceiling.
+    const now = Date.UTC(2026, 6, 22, 14, 0, 0); // 22:00 CST
+    const tomorrow9 = Date.UTC(2026, 6, 23, 1, 0, 0); // 09:00 CST next day
+    const duration = tomorrow9 - now;
+    expect(duration).toBeGreaterThan(DEFAULT_BACKOFF.maxIntervalMs);
+
+    const snoozed = schedule(
+      task,
+      { type: 'snooze', durationMs: duration },
+      now,
+      DEFAULT_BACKOFF,
+      noJitter,
+    );
+    expect(snoozed.nextFireAt).toBe(now + duration);
+    expect(snoozed.nextFireAt).toBe(tomorrow9);
   });
 });

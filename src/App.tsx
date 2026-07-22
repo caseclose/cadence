@@ -216,9 +216,21 @@ export default function App() {
             </div>
           </div>
           <div className="stat-grid">
-            <div className="stat-card"><span>{t('completed')}</span><strong>{stats.completed}</strong><small>{t('stats30Days')}</small></div>
-            <div className="stat-card"><span>{t('etaRatio')}</span><strong>{stats.medianRatio === null ? '-' : `${Math.round(stats.medianRatio * 100)}%`}</strong><small>{t('statsMedian')}</small></div>
-            <div className="stat-card"><span>{t('p90')}</span><strong>{stats.p90Ratio === null ? '-' : `${Math.round(stats.p90Ratio * 100)}%`}</strong><small>{t('statsP90')}</small></div>
+            <div className="stat-card">
+              <span className="stat-term" tabIndex={0} aria-label={`${t('completed')}. ${t('completedHint')}`} data-tooltip={t('completedHint')}>{t('completed')}</span>
+              <strong>{stats.completed}</strong>
+              <small>{t('stats30Days')}</small>
+            </div>
+            <div className="stat-card">
+              <span className="stat-term" tabIndex={0} aria-label={`${t('etaRatio')}. ${t('etaRatioHint')}`} data-tooltip={t('etaRatioHint')}>{t('etaRatio')}</span>
+              <strong>{stats.medianRatio === null ? '-' : `${Math.round(stats.medianRatio * 100)}%`}</strong>
+              <small className="stat-term" tabIndex={0} aria-label={`${t('statsMedian')}. ${t('statsMedianHint')}`} data-tooltip={t('statsMedianHint')}>{t('statsMedian')}</small>
+            </div>
+            <div className="stat-card">
+              <span className="stat-term" tabIndex={0} aria-label={`${t('p90')}. ${t('p90Hint')}`} data-tooltip={t('p90Hint')}>{t('p90')}</span>
+              <strong>{stats.p90Ratio === null ? '-' : `${Math.round(stats.p90Ratio * 100)}%`}</strong>
+              <small className="stat-term" tabIndex={0} aria-label={`${t('statsP90')}. ${t('statsP90Hint')}`} data-tooltip={t('statsP90Hint')}>{t('statsP90')}</small>
+            </div>
           </div>
         </section>
 

@@ -124,7 +124,10 @@ export function schedule(
     }
 
     case 'snooze': {
-      const duration = clamp(action.durationMs, cfg.minIntervalMs, cfg.maxIntervalMs);
+      // Explicit user delay: nextFireAt = now + durationMs.
+      // Only floor at minIntervalMs (anti-spam). Do NOT cap at maxIntervalMs —
+      // quick snoozes like "tomorrow 9:00" routinely exceed the 4h backoff ceiling.
+      const duration = Math.max(action.durationMs, cfg.minIntervalMs);
       return { ...base, state: 'snoozed', nextFireAt: now + duration };
     }
 
