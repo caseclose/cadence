@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
 
     const { data: hookRows, error: hookErr } = await admin
       .from('notification_webhooks')
-      .select('id, user_id, provider, url, secret, enabled')
+      .select('id, user_id, provider, url, secret, enabled, include_content')
       .in('user_id', userIds)
       .eq('enabled', true);
 
