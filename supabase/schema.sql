@@ -133,6 +133,24 @@ create policy "notification webhooks are private"
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+-- Per-destination reminder delivery ledger. Web Push and each Webhook retry
+-- independently; one channel cannot suppress another channel's delivery.
+create table if not exists public.notification_deliveries (
+  task_id uuid not null references public.tasks(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  fire_at bigint not null,
+  channel_id text not null,
+  delivered_at timestamptz not null default now(),
+  primary key (task_id, fire_at, channel_id)
+);
+create index if not exists notification_deliveries_user_idx on public.notification_deliveries (user_id, delivered_at desc);
+alter table public.notification_deliveries enable row level security;
+grant select on public.notification_deliveries to authenticated;
+grant select, insert, update, delete on public.notification_deliveries to service_role;
+drop policy if exists "notification deliveries are private" on public.notification_deliveries;
+create policy "notification deliveries are private" on public.notification_deliveries
+  for select to authenticated using (auth.uid() = user_id);
+
 -- ---------------------------------------------------------------------------
 -- Optional: schedule push-due Edge Function every minute (pg_cron + pg_net).
 -- Requires project secrets / vault setup — see docs/PUSH.md and migration_push.sql.

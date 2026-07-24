@@ -133,9 +133,7 @@ Deno.serve(async (req) => {
       return json({ error: dueErr.message }, 500);
     }
 
-    const due = ((dueRows ?? []) as DueTask[]).filter(
-      (t) => t.notified_fire_at == null || t.notified_fire_at !== t.next_fire_at,
-    );
+    const due = (dueRows ?? []) as DueTask[];
 
     if (due.length === 0) {
       return json({ ok: true, due: 0, pushSent: 0, webhookSent: 0 });
@@ -184,17 +182,33 @@ Deno.serve(async (req) => {
 
     let pushSent = 0;
     let webhookSent = 0;
-    const notifiedTaskIds: { id: string; next_fire_at: number }[] = [];
     const deadEndpoints: string[] = [];
+
+    const taskIds = due.map((task) => task.id);
+    const { data: deliveryRows, error: deliveryErr } = await admin
+      .from('notification_deliveries')
+      .select('task_id, fire_at, channel_id')
+      .in('task_id', taskIds);
+    if (deliveryErr) return json({ error: deliveryErr.message }, 500);
+    const dueSlots = new Set(due.map((task) => `${task.id}:${task.next_fire_at}`));
+    const delivered = new Set(
+      (deliveryRows ?? [])
+        .filter((row) => dueSlots.has(`${row.task_id}:${row.fire_at}`))
+        .map((row) => `${row.task_id}:${row.fire_at}:${row.channel_id}`),
+    );
 
     const usersWithDue = new Set(due.map((t) => t.user_id));
 
     for (const userId of usersWithDue) {
+      const userDue = due.filter((task) => task.user_id === userId);
       const userSubs = pushEnabled ? subsByUser.get(userId) ?? [] : [];
       const userHooks = hooksByUser.get(userId) ?? [];
-      let userDelivered = false;
 
       for (const sub of userSubs) {
+        const pending = userDue.filter(
+          (task) => !delivered.has(`${task.id}:${task.next_fire_at}:push:${sub.id}`),
+        );
+        if (pending.length === 0) continue;
         try {
           await webpush.sendNotification(
             {
@@ -204,26 +218,26 @@ Deno.serve(async (req) => {
             pushPayload,
           );
           pushSent += 1;
-          userDelivered = true;
+          await recordDeliveries(admin, pending, `push:${sub.id}`);
         } catch (err) {
           const status = (err as { statusCode?: number })?.statusCode;
-          if (status === 404 || status === 410) {
-            deadEndpoints.push(sub.endpoint);
-          } else {
-            console.error('webpush failed', err);
-          }
+          if (status === 404 || status === 410) deadEndpoints.push(sub.endpoint);
+          else console.error('webpush failed', err);
         }
       }
 
       for (const hook of userHooks) {
+        const channelId = `webhook:${hook.id}`;
+        const pending = userDue.filter(
+          (task) => !delivered.has(`${task.id}:${task.next_fire_at}:${channelId}`),
+        );
+        if (pending.length === 0) continue;
         try {
-          const text = hook.include_content
-            ? formatWebhookReminder(due.filter((t) => t.user_id === userId))
-            : REMINDER_TEXT;
+          const text = hook.include_content ? formatWebhookReminder(pending) : REMINDER_TEXT;
           const r = await sendChatWebhook(hook, text);
           if (r.ok) {
             webhookSent += 1;
-            userDelivered = true;
+            await recordDeliveries(admin, pending, channelId);
           } else {
             console.error('webhook failed', hook.provider, r.detail);
           }
@@ -231,24 +245,6 @@ Deno.serve(async (req) => {
           console.error('webhook failed', hook.provider, err);
         }
       }
-
-      // Mark tasks notified when we actually delivered, OR when the user has no
-      // channels at all (avoid retry storms). If channels exist but all failed,
-      // leave unmarked so the next cron tick retries.
-      const hasChannels = userSubs.length > 0 || userHooks.length > 0;
-      if (userDelivered || !hasChannels) {
-        for (const t of due.filter((d) => d.user_id === userId)) {
-          notifiedTaskIds.push({ id: t.id, next_fire_at: t.next_fire_at });
-        }
-      }
-    }
-
-    for (const t of notifiedTaskIds) {
-      const { error } = await admin
-        .from('tasks')
-        .update({ notified_fire_at: t.next_fire_at })
-        .eq('id', t.id);
-      if (error) console.error('update notified_fire_at failed', t.id, error.message);
     }
 
     if (deadEndpoints.length > 0) {
@@ -275,6 +271,24 @@ Deno.serve(async (req) => {
 });
 
 
+
+async function recordDeliveries(
+  admin: ReturnType<typeof createClient>,
+  tasks: DueTask[],
+  channelId: string,
+): Promise<void> {
+  const rows = tasks.map((task) => ({
+    task_id: task.id,
+    user_id: task.user_id,
+    fire_at: task.next_fire_at,
+    channel_id: channelId,
+  }));
+  const { error } = await admin.from('notification_deliveries').upsert(rows, {
+    onConflict: 'task_id,fire_at,channel_id',
+    ignoreDuplicates: true,
+  });
+  if (error) throw error;
+}
 
 function isAllowedWebhookUrl(raw: string, provider: Provider): boolean {
   try {
