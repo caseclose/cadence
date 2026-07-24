@@ -36,6 +36,12 @@ export function ProjectIntro() {
               <p className="intro-strategy-rhythm">{t('introExponentialRhythm')}</p>
               <p className="intro-strategy-example">{t('introExponentialExample')}</p>
             </div>
+            <div className="intro-strategy">
+              <TermTip className="intro-badge recurring" hintKey="recurringHint">{t('recurring')}</TermTip>
+              <p className="intro-strategy-scene">{t('introRecurringScene')}</p>
+              <p className="intro-strategy-rhythm">{t('introRecurringRhythm')}</p>
+              <p className="intro-strategy-example">{t('introRecurringExample')}</p>
+            </div>
           </div>
           <p className="intro-privacy">
             {t('introPrivacy')}{' '}

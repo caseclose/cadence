@@ -737,7 +737,7 @@ section {
 
 .intro-strategies {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   margin-top: 10px;
 }
@@ -767,6 +767,11 @@ section {
 
 .intro-strategy-scene {
   margin-top: 2px !important;
+}
+
+.intro-badge.recurring {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
 }
 
 .intro-strategy-example {
