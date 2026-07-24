@@ -24,6 +24,10 @@ describe('sanitizeTasks', () => {
     expect(sanitizeTasks([null, {}, valid])).toEqual([valid]);
   });
 
+  it('accepts recurring task records', () => {
+    expect(sanitizeTasks([{ ...valid, strategy: 'recurring' }])[0]?.strategy).toBe('recurring');
+  });
+
   it('coerces string numbers from Supabase bigint', () => {
     const raw = { ...valid, etaMs: '3600', nextFireAt: '100' };
     expect(sanitizeTasks([raw])[0].etaMs).toBe(3600);

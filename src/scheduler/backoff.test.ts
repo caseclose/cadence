@@ -252,3 +252,31 @@ describe('explicit snooze', () => {
     expect(snoozed.nextFireAt).toBe(nextDay9);
   });
 });
+
+describe('recurring reminders', () => {
+  it('schedules the next fixed interval when a round is completed', () => {
+    const now = 1_000_000;
+    const task = createTask({ id: 'r', title: 'drink water', strategy: 'recurring', etaMs: 30 * MIN }, now);
+    const next = schedule(task, { type: 'done' }, task.nextFireAt, DEFAULT_BACKOFF, noJitter);
+    expect(next.state).toBe('waiting');
+    expect(next.completedAt).toBeUndefined();
+    expect(next.attempts).toBe(0);
+    expect(next.nextFireAt).toBe(task.nextFireAt + 30 * MIN);
+  });
+
+  it('skips missed fixed intervals instead of issuing an immediate catch-up reminder', () => {
+    const task = createTask({ id: 'r', title: 'stand up', strategy: 'recurring', etaMs: 30 * MIN }, 0);
+    const now = task.nextFireAt + 65 * MIN;
+    const next = schedule(task, { type: 'done' }, now, DEFAULT_BACKOFF, noJitter);
+    expect(next.nextFireAt).toBe(task.nextFireAt + 3 * 30 * MIN);
+    expect(next.nextFireAt).toBeGreaterThan(now);
+  });
+
+  it('moves a skipped round forward by one interval from the current time', () => {
+    const task = createTask({ id: 'r', title: 'stretch', strategy: 'recurring', etaMs: 30 * MIN }, 0);
+    const now = task.nextFireAt;
+    const next = schedule(task, { type: 'checked_not_done' }, now, DEFAULT_BACKOFF, noJitter);
+    expect(next.state).toBe('waiting');
+    expect(next.nextFireAt).toBe(now + 30 * MIN);
+  });
+});

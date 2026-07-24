@@ -38,6 +38,7 @@ export function rawInterval(
     // 5m, 10m, 20m, 40m ... doubling from the base.
     return cfg.exponentialBaseMs * 2 ** Math.max(0, attempt - 1);
   }
+  if (strategy === 'recurring') return etaMs;
   // converging: first backoff is a fraction of the ETA, then decays.
   const first = etaMs * cfg.convergingFirstFraction;
   return first * cfg.convergingDecay ** Math.max(0, attempt - 1);
@@ -86,6 +87,20 @@ export function schedule(
 
   switch (action.type) {
     case 'done':
+      // A recurring reminder is never archived by confirming a round. Keep the
+      // cadence anchored to the planned slot, skipping missed intervals.
+      if (task.strategy === 'recurring') {
+        const interval = Math.max(task.etaMs, cfg.minIntervalMs);
+        const elapsed = Math.max(0, now - task.nextFireAt);
+        const skipped = Math.floor(elapsed / interval);
+        return {
+          ...base,
+          state: 'waiting',
+          attempts: 0,
+          completedAt: undefined,
+          nextFireAt: task.nextFireAt + (skipped + 1) * interval,
+        };
+      }
       return { ...base, state: 'done', completedAt: now };
 
     case 'reopen':
@@ -152,6 +167,14 @@ export function schedule(
     }
 
     case 'checked_not_done': {
+      if (task.strategy === 'recurring') {
+        return {
+          ...base,
+          state: 'waiting',
+          attempts: 0,
+          nextFireAt: Math.max(now, task.nextFireAt) + Math.max(task.etaMs, cfg.minIntervalMs),
+        };
+      }
       const attempt = task.attempts + 1;
       return {
         ...base,

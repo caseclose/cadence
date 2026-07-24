@@ -98,12 +98,12 @@ export function TaskCard({
           </TermTip>
           <TermTip
             className="badge strategy"
-            hintKey={task.strategy === 'converging' ? 'convergingHint' : 'exponentialHint'}
+            hintKey={task.strategy === 'converging' ? 'convergingHint' : task.strategy === 'exponential' ? 'exponentialHint' : 'recurringHint'}
           >
-            {task.strategy === 'converging' ? t('convergingShort') : t('exponentialShort')}
+            {task.strategy === 'converging' ? t('convergingShort') : task.strategy === 'exponential' ? t('exponentialShort') : t('recurringShort')}
           </TermTip>
           <span>
-            <TermTip hintKey="etaHint">ETA</TermTip>
+            <TermTip hintKey={task.strategy === 'recurring' ? 'recurringHint' : 'etaHint'}>{task.strategy === 'recurring' ? t('recurringEvery') : 'ETA'}</TermTip>
             {' '}{formatDuration(task.etaMs)}
           </span>
           {!done && (

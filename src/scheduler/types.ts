@@ -1,4 +1,4 @@
-export type Strategy = 'converging' | 'exponential';
+export type Strategy = 'converging' | 'exponential' | 'recurring';
 
 export type TaskState = 'waiting' | 'due' | 'polling' | 'snoozed' | 'done';
 

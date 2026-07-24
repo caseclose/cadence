@@ -58,7 +58,7 @@ export function ReminderModal({ task, onResolve, onClose, onOpenMemo }: Props) {
           <span className="reminder-kicker"><TermTip hintKey="reminderKickerHint">{t('reminderKicker')}</TermTip></span>
           <h2 className="modal-title">{t('reminderTitle', { title: task.title })}</h2>
           <p className="modal-sub">
-            {task.strategy === 'converging' ? t('convergingPrompt') : t('pollingPrompt')}
+            {task.strategy === 'converging' ? t('convergingPrompt') : task.strategy === 'recurring' ? t('recurringPrompt', { duration: formatDuration(task.etaMs) }) : t('pollingPrompt')}
           </p>
         </header>
 
@@ -82,10 +82,10 @@ export function ReminderModal({ task, onResolve, onClose, onOpenMemo }: Props) {
 
         <div className="modal-actions">
           <button type="button" className="primary reminder-done" onClick={() => act({ type: 'done' })}>
-            {t('doneAction')}
+            {task.strategy === 'recurring' ? t('completeRound') : t('doneAction')}
           </button>
           <button type="button" className="reminder-secondary" onClick={() => act({ type: 'checked_not_done' })}>
-            {t('notDone')}
+            {task.strategy === 'recurring' ? t('skipRound') : t('notDone')}
           </button>
           <button type="button" className="reminder-secondary" onClick={() => act({ type: 'no_resources' })}>
             {t('noResources')}

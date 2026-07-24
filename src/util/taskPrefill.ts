@@ -6,7 +6,7 @@ export function parseTaskPrefill(search: string): { title?: string; when?: strin
   return {
     title: params.get('title') || undefined,
     when: params.get('when') || undefined,
-    strategy: strategy === 'converging' || strategy === 'exponential' ? strategy : undefined,
+    strategy: strategy === 'converging' || strategy === 'exponential' || strategy === 'recurring' ? strategy : undefined,
     note: params.get('note') || undefined,
   };
 }

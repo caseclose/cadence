@@ -1,7 +1,7 @@
 import { Strategy, Task, TaskState } from '../scheduler/types';
 
 const VALID_STATES = new Set<TaskState>(['waiting', 'due', 'polling', 'snoozed', 'done']);
-const VALID_STRATEGIES = new Set<Strategy>(['converging', 'exponential']);
+const VALID_STRATEGIES = new Set<Strategy>(['converging', 'exponential', 'recurring']);
 
 export function asNum(v: unknown, fallback = 0): number {
   if (typeof v === 'number' && Number.isFinite(v)) return v;

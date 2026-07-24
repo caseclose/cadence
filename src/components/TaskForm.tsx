@@ -41,7 +41,7 @@ export function TaskForm({ onAdd, disabled }: Props) {
         duration: formatDuration(parsed.etaMs),
       });
     }
-    return t('firstReminderIn', { duration: formatDuration(parsed.etaMs) });
+    return strategy === 'recurring' ? t('recurringFirstReminderIn', { duration: formatDuration(parsed.etaMs) }) : t('firstReminderIn', { duration: formatDuration(parsed.etaMs) });
   })();
 
   return (
@@ -68,11 +68,12 @@ export function TaskForm({ onAdd, disabled }: Props) {
           value={strategy}
           onChange={(e) => setStrategy(e.target.value as Strategy)}
           aria-label={`${t('backoffStrategy')}. ${t('backoffStrategyHint')}`}
-          title={t(strategy === 'converging' ? 'convergingHint' : 'exponentialHint')}
+          title={t(strategy === 'converging' ? 'convergingHint' : strategy === 'exponential' ? 'exponentialHint' : 'recurringHint')}
           disabled={disabled}
         >
           <option value="converging" title={t('convergingHint')}>{t('converging')}</option>
           <option value="exponential" title={t('exponentialHint')}>{t('exponential')}</option>
+          <option value="recurring" title={t('recurringHint')}>{t('recurring')}</option>
         </select>
         <button type="submit" className="btn-submit" disabled={!canSubmit} title={t('suspendHint')}>
           {t('suspend')}

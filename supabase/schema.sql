@@ -8,7 +8,7 @@ create table if not exists public.tasks (
   title text not null,
   note text,
   strategy text not null default 'converging'
-    check (strategy in ('converging', 'exponential')),
+    check (strategy in ('converging', 'exponential', 'recurring')),
   eta_ms bigint not null,
   initial_eta_ms bigint,
   state text not null default 'waiting'
