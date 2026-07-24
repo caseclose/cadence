@@ -257,26 +257,35 @@ describe('recurring reminders', () => {
   it('schedules the next fixed interval when a round is completed', () => {
     const now = 1_000_000;
     const task = createTask({ id: 'r', title: 'drink water', strategy: 'recurring', etaMs: 30 * MIN }, now);
-    const next = schedule(task, { type: 'done' }, task.nextFireAt, DEFAULT_BACKOFF, noJitter);
+    const completedAt = task.nextFireAt + 2 * MIN;
+    const next = schedule(task, { type: 'done' }, completedAt, DEFAULT_BACKOFF, noJitter);
     expect(next.state).toBe('waiting');
     expect(next.completedAt).toBeUndefined();
     expect(next.attempts).toBe(0);
-    expect(next.nextFireAt).toBe(task.nextFireAt + 30 * MIN);
+    expect(next.nextFireAt).toBe(completedAt + 30 * MIN);
   });
 
-  it('skips missed fixed intervals instead of issuing an immediate catch-up reminder', () => {
+  it('restarts the interval from the response time after missed rounds', () => {
     const task = createTask({ id: 'r', title: 'stand up', strategy: 'recurring', etaMs: 30 * MIN }, 0);
     const now = task.nextFireAt + 65 * MIN;
     const next = schedule(task, { type: 'done' }, now, DEFAULT_BACKOFF, noJitter);
-    expect(next.nextFireAt).toBe(task.nextFireAt + 3 * 30 * MIN);
-    expect(next.nextFireAt).toBeGreaterThan(now);
+    expect(next.nextFireAt).toBe(now + 30 * MIN);
   });
 
-  it('moves a skipped round forward by one interval from the current time', () => {
+  it('restarts the interval from now when a round is skipped', () => {
     const task = createTask({ id: 'r', title: 'stretch', strategy: 'recurring', etaMs: 30 * MIN }, 0);
-    const now = task.nextFireAt;
+    const now = task.nextFireAt - 5 * MIN;
     const next = schedule(task, { type: 'checked_not_done' }, now, DEFAULT_BACKOFF, noJitter);
     expect(next.state).toBe('waiting');
     expect(next.nextFireAt).toBe(now + 30 * MIN);
+  });
+
+  it('allows completing a recurring round early and restarts from now', () => {
+    const task = createTask({ id: 'r', title: 'drink water', strategy: 'recurring', etaMs: 30 * MIN }, 0);
+    const early = task.nextFireAt - 5 * MIN;
+    const next = schedule(task, { type: 'done' }, early, DEFAULT_BACKOFF, noJitter);
+    expect(next.state).toBe('waiting');
+    expect(next.nextFireAt).toBe(early + 30 * MIN);
+    expect(next.completedAt).toBeUndefined();
   });
 });

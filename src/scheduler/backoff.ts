@@ -90,15 +90,15 @@ export function schedule(
       // A recurring reminder is never archived by confirming a round. Keep the
       // cadence anchored to the planned slot, skipping missed intervals.
       if (task.strategy === 'recurring') {
+        // Completing a round manually starts the next interval from now. This
+        // also prevents early completion from accumulating the old schedule.
         const interval = Math.max(task.etaMs, cfg.minIntervalMs);
-        const elapsed = Math.max(0, now - task.nextFireAt);
-        const skipped = Math.floor(elapsed / interval);
         return {
           ...base,
           state: 'waiting',
           attempts: 0,
           completedAt: undefined,
-          nextFireAt: task.nextFireAt + (skipped + 1) * interval,
+          nextFireAt: now + interval,
         };
       }
       return { ...base, state: 'done', completedAt: now };
@@ -168,11 +168,12 @@ export function schedule(
 
     case 'checked_not_done': {
       if (task.strategy === 'recurring') {
+        // Skipping a round also starts the next interval from the response time.
         return {
           ...base,
           state: 'waiting',
           attempts: 0,
-          nextFireAt: Math.max(now, task.nextFireAt) + Math.max(task.etaMs, cfg.minIntervalMs),
+          nextFireAt: now + Math.max(task.etaMs, cfg.minIntervalMs),
         };
       }
       const attempt = task.attempts + 1;

@@ -81,10 +81,18 @@ export function ReminderModal({ task, onResolve, onClose, onOpenMemo }: Props) {
         )}
 
         <div className="modal-actions">
-          <button type="button" className="primary reminder-done" onClick={() => act({ type: 'done' })}>
+          <button
+            type="button"
+            className="primary reminder-done"
+            onClick={() => act({ type: 'done' })}
+          >
             {task.strategy === 'recurring' ? t('completeRound') : t('doneAction')}
           </button>
-          <button type="button" className="reminder-secondary" onClick={() => act({ type: 'checked_not_done' })}>
+          <button
+            type="button"
+            className="reminder-secondary"
+            onClick={() => act({ type: 'checked_not_done' })}
+          >
             {task.strategy === 'recurring' ? t('skipRound') : t('notDone')}
           </button>
           <button type="button" className="reminder-secondary" onClick={() => act({ type: 'no_resources' })}>
